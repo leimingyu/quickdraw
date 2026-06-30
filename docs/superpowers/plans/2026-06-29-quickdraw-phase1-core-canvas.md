@@ -973,16 +973,17 @@ export class App {
 
   private bindPointerEvents(): void {
     const svg = this.renderer.svg;
+    const sig = { signal: this.listeners.signal };
     svg.addEventListener('pointerdown', (ev) => {
       svg.setPointerCapture(ev.pointerId);
       this.current.onPointerDown(this.world(ev), ev);
-    });
-    svg.addEventListener('pointermove', (ev) => this.current.onPointerMove(this.world(ev), ev));
+    }, sig);
+    svg.addEventListener('pointermove', (ev) => this.current.onPointerMove(this.world(ev), ev), sig);
     svg.addEventListener('pointerup', (ev) => {
       this.current.onPointerUp(this.world(ev), ev);
       svg.releasePointerCapture(ev.pointerId);
-    });
-    svg.addEventListener('dblclick', (ev) => this.current.onDoubleClick?.(this.world(ev), ev));
+    }, sig);
+    svg.addEventListener('dblclick', (ev) => this.current.onDoubleClick?.(this.world(ev), ev), sig);
   }
 
   private world(ev: { clientX: number; clientY: number }) {
@@ -2070,13 +2071,15 @@ Replace `commit()`:
   }
 ```
 
-Add undo/redo:
+Add undo/redo (viewport is preserved — not undoable):
 
 ```ts
   undo(): void {
     const ws = this.history.undo();
     if (!ws) return;
+    const vp = { ...this.activeTab.viewport };   // keep the live camera
     this.workspace = ws;
+    this.activeTab.viewport = vp;
     this.selection.clear();
     this.render();
   }
@@ -2084,7 +2087,9 @@ Add undo/redo:
   redo(): void {
     const ws = this.history.redo();
     if (!ws) return;
+    const vp = { ...this.activeTab.viewport };   // keep the live camera
     this.workspace = ws;
+    this.activeTab.viewport = vp;
     this.selection.clear();
     this.render();
   }
@@ -2253,7 +2258,11 @@ In the constructor after `this.bindKeyboard();` add `this.bindViewport();` and i
       }
     }, { ...sig, passive: false });
 
-    window.addEventListener('keydown', (ev) => { if (ev.code === 'Space') { ev.preventDefault(); this.spaceDown = true; } }, sig);
+    window.addEventListener('keydown', (ev) => {
+      const t = ev.target as HTMLElement | null;
+      if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA')) return;
+      if (ev.code === 'Space') { ev.preventDefault(); this.spaceDown = true; }
+    }, sig);
     window.addEventListener('keyup', (ev) => { if (ev.code === 'Space') this.spaceDown = false; }, sig);
 
     svg.addEventListener('pointerdown', (ev) => {
