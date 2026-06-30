@@ -2,6 +2,8 @@ import type { Connector, Endpoint, Shape, Tab } from '../model/types';
 import { isAttached, isShape } from '../model/document';
 import type { Box, Point } from '../model/geometry';
 
+const NS = 'http://www.w3.org/2000/svg';
+
 export interface Segment { x1: number; y1: number; x2: number; y2: number; }
 
 function attachedShape(tab: Tab, e: Endpoint): Shape | null {
@@ -62,4 +64,21 @@ function distToSegment(p: Point, s: Segment): number {
 export function connectorHit(tab: Tab, c: Connector, point: Point, tol: number): boolean {
   const seg = connectorSegment(tab, c);
   return seg ? distToSegment(point, seg) <= tol : false;
+}
+
+export function connectorToSvg(tab: Tab, c: Connector, selected: boolean): SVGGElement | null {
+  const seg = connectorSegment(tab, c);
+  if (!seg) return null;
+  const g = document.createElementNS(NS, 'g');
+  g.setAttribute('data-id', c.id);
+  const line = document.createElementNS(NS, 'line');
+  line.setAttribute('x1', String(seg.x1));
+  line.setAttribute('y1', String(seg.y1));
+  line.setAttribute('x2', String(seg.x2));
+  line.setAttribute('y2', String(seg.y2));
+  line.setAttribute('stroke', selected ? '#3b82f6' : c.style.stroke);
+  line.setAttribute('stroke-width', String(c.style.strokeWidth));
+  if (c.style.arrowEnd) line.setAttribute('marker-end', 'url(#arrowhead)');
+  g.appendChild(line);
+  return g;
 }
