@@ -1736,7 +1736,10 @@ Add methods to the class:
     host.appendChild(input);
     input.focus();
     input.select();
+    let done = false;
     const commit = (write: boolean) => {
+      if (done) return;
+      done = true;
       if (write) this.applyText(s.id, input.value);
       input.remove();
     };
