@@ -5,6 +5,7 @@ import {
   findNode, addNode, removeNodes, reorder, cloneWorkspace,
   groupNodes, ungroupNodes, expandToGroups, groupMembers,
 } from '../../src/model/document';
+import type { Shape } from '../../src/model/types';
 
 beforeEach(() => resetIds());
 
@@ -54,8 +55,8 @@ describe('document model', () => {
     const ws = createWorkspace();
     addNode(getActiveTab(ws), createShape('rect', 0, 0));
     const copy = cloneWorkspace(ws);
-    copy.tabs[0].nodes[0].x = 999;
-    expect(getActiveTab(ws).nodes[0].x).toBe(0);
+    (copy.tabs[0].nodes[0] as Shape).x = 999;
+    expect((getActiveTab(ws).nodes[0] as Shape).x).toBe(0);
   });
 });
 

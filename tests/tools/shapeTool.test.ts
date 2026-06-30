@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { App } from '../../src/app';
 import { ShapeTool } from '../../src/tools/shapeTool';
 import type { Point } from '../../src/model/geometry';
-import type { ShapeKind } from '../../src/model/types';
+import type { Shape, ShapeKind } from '../../src/model/types';
 
 let app: App;
 beforeEach(() => {
@@ -38,7 +38,7 @@ describe('ShapeTool', () => {
     const tool = makeTool('rect');
     click(tool, { x: 200, y: 150 });
     expect(app.activeTab.nodes).toHaveLength(1);
-    const s = app.activeTab.nodes[0];
+    const s = app.activeTab.nodes[0] as Shape;
     expect(s.kind).toBe('rect');
     expect(s).toMatchObject({ w: 120, h: 70 });
     expect(s.x + s.w / 2).toBeCloseTo(200);
@@ -94,7 +94,7 @@ describe('ShapeTool', () => {
   it('floors a thin drag to a minimum visible size', () => {
     const tool = makeTool('rect');
     drag(tool, { x: 0, y: 0 }, { x: 200, y: 2 });
-    const s = app.activeTab.nodes[0];
+    const s = app.activeTab.nodes[0] as Shape;
     expect(s.w).toBe(200);
     expect(s.h).toBe(8); // MIN_SIZE floor
   });

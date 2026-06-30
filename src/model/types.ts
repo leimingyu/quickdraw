@@ -22,8 +22,24 @@ export interface Shape {
   groupId?: string;
 }
 
-/** Phase 2 widens this to `Shape | Connector | Group`. */
-export type Node = Shape;
+export interface ConnectorStyle {
+  stroke: string;
+  strokeWidth: number;
+  arrowEnd: boolean;
+}
+
+export type Endpoint = { nodeId: string } | { x: number; y: number };
+
+export interface Connector {
+  id: string;
+  kind: 'connector';
+  from: Endpoint;
+  to: Endpoint;
+  style: ConnectorStyle;
+  groupId?: string;
+}
+
+export type Node = Shape | Connector;
 
 export interface Viewport {
   panX: number;

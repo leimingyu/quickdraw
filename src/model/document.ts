@@ -1,4 +1,4 @@
-import type { Node, Shape, ShapeKind, ShapeStyle, Tab, Workspace } from './types';
+import type { Connector, ConnectorStyle, Endpoint, Node, Shape, ShapeKind, ShapeStyle, Tab, Workspace } from './types';
 import { uid } from '../util/id';
 
 export const DEFAULT_STYLE: ShapeStyle = {
@@ -8,6 +8,20 @@ export const DEFAULT_STYLE: ShapeStyle = {
   fontSize: 16,
   fontColor: '#1e1e1e',
 };
+
+export const DEFAULT_CONNECTOR_STYLE: ConnectorStyle = {
+  stroke: '#1e1e1e',
+  strokeWidth: 2,
+  arrowEnd: true,
+};
+
+export const isConnector = (n: Node): n is Connector => n.kind === 'connector';
+export const isShape = (n: Node): n is Shape => n.kind !== 'connector';
+export const isAttached = (e: Endpoint): e is { nodeId: string } => 'nodeId' in e;
+
+export function createConnector(from: Endpoint, to: Endpoint): Connector {
+  return { id: uid('c'), kind: 'connector', from, to, style: { ...DEFAULT_CONNECTOR_STYLE } };
+}
 
 export function createShape(kind: ShapeKind, x: number, y: number, w = 120, h = 70): Shape {
   const style = { ...DEFAULT_STYLE };
@@ -58,7 +72,7 @@ export function cloneWorkspace(ws: Workspace): Workspace {
 }
 
 /** Ids of every node sharing `node`'s group (or just the node itself if ungrouped). */
-export function groupMembers(tab: Tab, node: Shape): string[] {
+export function groupMembers(tab: Tab, node: Node): string[] {
   if (!node.groupId) return [node.id];
   const gid = node.groupId;
   return tab.nodes.filter((n) => n.groupId === gid).map((n) => n.id);

@@ -1,5 +1,6 @@
-import type { Tab, Viewport } from '../model/types';
+import type { Shape, Tab, Viewport } from '../model/types';
 import { handlePositions, selectionBounds, type Point } from '../model/geometry';
+import { isShape } from '../model/document';
 import { shapeToSvg } from './shapes';
 
 const NS = 'http://www.w3.org/2000/svg';
@@ -27,13 +28,13 @@ export class Renderer {
     const transform = `translate(${vp.panX} ${vp.panY}) scale(${vp.zoom})`;
     this.content.setAttribute('transform', transform);
     this.overlay.setAttribute('transform', transform);
-    this.content.replaceChildren(...tab.nodes.map(shapeToSvg));
+    this.content.replaceChildren(...tab.nodes.filter(isShape).map(shapeToSvg));
     this.overlay.replaceChildren();
     this.drawSelection(tab, selection);
   }
 
   private drawSelection(tab: Tab, selection: Set<string>): void {
-    const shapes = tab.nodes.filter((n) => selection.has(n.id));
+    const shapes = tab.nodes.filter((n): n is Shape => selection.has(n.id) && isShape(n));
     const box = selectionBounds(shapes);
     if (!box) return;
     const outline = document.createElementNS(NS, 'rect');

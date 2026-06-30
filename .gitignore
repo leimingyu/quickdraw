@@ -18,3 +18,7 @@ npm-debug.log*
 .idea/
 .vscode/
 *.local
+
+# Live-verification artifacts (Playwright snapshots + screenshots)
+.playwright-mcp/
+/quickdraw-*.png

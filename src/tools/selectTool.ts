@@ -1,7 +1,7 @@
 import type { App } from '../app';
 import type { Shape } from '../model/types';
 import { hitTest, shapeInRect, handlePositions, resizeBox, type Box, type Handle, type Point } from '../model/geometry';
-import { groupMembers, expandToGroups } from '../model/document';
+import { groupMembers, expandToGroups, isShape } from '../model/document';
 import type { Tool } from './types';
 
 type Mode = 'idle' | 'marquee' | 'move' | 'resize';
@@ -30,7 +30,7 @@ export class SelectTool implements Tool {
         return;
       }
     }
-    const hit = hitTest(this.app.activeTab.nodes as Shape[], world);
+    const hit = hitTest(this.app.activeTab.nodes.filter(isShape), world);
     if (hit) {
       if (ev.shiftKey) this.toggleGroup(hit);
       else if (!this.app.selection.has(hit.id)) {
@@ -60,7 +60,7 @@ export class SelectTool implements Tool {
       const dx = world.x - this.last.x;
       const dy = world.y - this.last.y;
       this.last = world;
-      for (const s of this.app.activeTab.nodes as Shape[]) {
+      for (const s of this.app.activeTab.nodes.filter(isShape)) {
         if (this.app.selection.has(s.id)) { s.x += dx; s.y += dy; this.moved = true; }
       }
       this.app.render();
@@ -85,7 +85,7 @@ export class SelectTool implements Tool {
 
   private applyMarquee(world: Point): void {
     const hits = new Set(
-      (this.app.activeTab.nodes as Shape[])
+      this.app.activeTab.nodes.filter(isShape)
         .filter((s) => shapeInRect(s, this.marqueeBox(world)))
         .map((s) => s.id),
     );
@@ -112,14 +112,14 @@ export class SelectTool implements Tool {
   }
 
   applyText(id: string, value: string): void {
-    const s = (this.app.activeTab.nodes as Shape[]).find((n) => n.id === id);
+    const s = this.app.activeTab.nodes.filter(isShape).find((n) => n.id === id);
     if (!s) return;
     s.text = value;
     this.app.commit();
   }
 
   onDoubleClick(world: Point, _ev?: MouseEvent): void {
-    const hit = hitTest(this.app.activeTab.nodes as Shape[], world);
+    const hit = hitTest(this.app.activeTab.nodes.filter(isShape), world);
     if (!hit) return;
     this.app.selection = new Set([hit.id]);
     this.app.render();
@@ -173,7 +173,7 @@ export class SelectTool implements Tool {
   private singleSelected(): Shape | null {
     if (this.app.selection.size !== 1) return null;
     const id = [...this.app.selection][0];
-    return (this.app.activeTab.nodes as Shape[]).find((s) => s.id === id) ?? null;
+    return this.app.activeTab.nodes.filter(isShape).find((s) => s.id === id) ?? null;
   }
 
   private handleAt(world: Point): Handle | null {
