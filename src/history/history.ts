@@ -23,16 +23,16 @@ export class History {
     const prev = this.undoStack.pop();
     if (!prev) return null;
     this.redoStack.push(this.present);
-    this.present = prev;
-    return cloneWorkspace(prev);
+    this.present = cloneWorkspace(prev);
+    return cloneWorkspace(this.present);
   }
 
   redo(): Workspace | null {
     const next = this.redoStack.pop();
     if (!next) return null;
     this.undoStack.push(this.present);
-    this.present = next;
-    return cloneWorkspace(next);
+    this.present = cloneWorkspace(next);
+    return cloneWorkspace(this.present);
   }
 
   canUndo(): boolean {
