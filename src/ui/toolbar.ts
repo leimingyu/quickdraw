@@ -58,11 +58,13 @@ export function mountToolbar(app: App, container: HTMLElement): void {
 
   const undo = document.createElement('button');
   undo.textContent = 'Undo';
+  undo.title = 'Undo (⌘Z / Ctrl+Z)';
   undo.addEventListener('click', () => app.undo());
   bar.appendChild(undo);
 
   const redo = document.createElement('button');
   redo.textContent = 'Redo';
+  redo.title = 'Redo (⌘⇧Z / Ctrl+Y)';
   redo.addEventListener('click', () => app.redo());
   bar.appendChild(redo);
 
