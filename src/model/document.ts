@@ -2,17 +2,12 @@ import type { Connector, ConnectorStyle, Endpoint, Node, Shape, ShapeKind, Shape
 import { uid } from '../util/id';
 
 export const DEFAULT_STYLE: ShapeStyle = {
-  fill: '#ffffff',
-  stroke: '#1e1e1e',
-  strokeWidth: 2,
-  fontSize: 16,
-  fontColor: '#1e1e1e',
+  fill: '#ffffff', stroke: '#1e1e1e', strokeWidth: 2, fontSize: 16, fontColor: '#1e1e1e',
+  dashed: false,
 };
 
 export const DEFAULT_CONNECTOR_STYLE: ConnectorStyle = {
-  stroke: '#1e1e1e',
-  strokeWidth: 2,
-  arrowEnd: true,
+  stroke: '#1e1e1e', strokeWidth: 2, arrowEnd: true, arrowStart: false, dashed: false,
 };
 
 export const isConnector = (n: Node): n is Connector => n.kind === 'connector';
@@ -130,4 +125,29 @@ export function ungroupNodes(tab: Tab, ids: Set<string>): void {
   for (const n of tab.nodes) {
     if (members.has(n.id)) delete n.groupId;
   }
+}
+
+export type StylePatch = Partial<ShapeStyle & ConnectorStyle>;
+
+const SHAPE_ONLY = new Set(['fill', 'fontSize', 'fontColor']);
+const CONNECTOR_ONLY = new Set(['arrowStart', 'arrowEnd']);
+
+/** Apply a style patch to the selected nodes, routing each key by node kind. */
+export function restyleNodes(tab: Tab, ids: Set<string>, patch: StylePatch): void {
+  for (const n of tab.nodes) {
+    if (!ids.has(n.id)) continue;
+    for (const [key, value] of Object.entries(patch)) {
+      if (SHAPE_ONLY.has(key) && !isShape(n)) continue;
+      if (CONNECTOR_ONLY.has(key) && !isConnector(n)) continue;
+      (n.style as unknown as Record<string, unknown>)[key] = value;
+    }
+  }
+}
+
+/** Move the selected nodes to the front/back of the z-order, preserving relative order. */
+export function reorderSelection(tab: Tab, ids: Set<string>, dir: 'front' | 'back'): void {
+  const selected = tab.nodes.filter((n) => ids.has(n.id));
+  if (selected.length === 0) return;
+  const rest = tab.nodes.filter((n) => !ids.has(n.id));
+  tab.nodes = dir === 'front' ? [...rest, ...selected] : [...selected, ...rest];
 }

@@ -7,6 +7,7 @@ export interface ShapeStyle {
   strokeWidth: number;
   fontSize: number;
   fontColor: string;
+  dashed?: boolean;
 }
 
 export interface Shape {
@@ -26,6 +27,8 @@ export interface ConnectorStyle {
   stroke: string;
   strokeWidth: number;
   arrowEnd: boolean;
+  arrowStart?: boolean;
+  dashed?: boolean;
 }
 
 export type Endpoint = { nodeId: string } | { x: number; y: number };
