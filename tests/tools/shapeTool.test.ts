@@ -12,8 +12,8 @@ beforeEach(() => {
 });
 
 function down(tool: ShapeTool, p: Point) {
-  tool.onPointerDown(p, {} as PointerEvent);
-  tool.onPointerUp(p, {} as PointerEvent);
+  tool.onPointerDown(p);
+  tool.onPointerUp();
 }
 
 describe('ShapeTool', () => {

@@ -37,7 +37,8 @@ export class App {
     this.currentToolName = name;
     this.current = this.tools.get(name) ?? new NoopTool();
     this.current.onActivate?.();
-    this.selection.clear();
+    // Selection persists across tool switches; it is cleared only by explicit
+    // user actions (clicking empty canvas, Esc, or delete).
     this.render();
   }
 
