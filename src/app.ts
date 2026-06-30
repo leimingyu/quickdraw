@@ -2,6 +2,7 @@ import { Renderer } from './render/renderer';
 import { createWorkspace, getActiveTab, removeNodes } from './model/document';
 import type { Tab, Workspace } from './model/types';
 import type { Tool, ToolName } from './tools/types';
+import { History } from './history/history';
 
 class NoopTool implements Tool {
   onPointerDown(): void {}
@@ -18,9 +19,11 @@ export class App {
   private tools = new Map<ToolName, Tool>();
   private current: Tool = new NoopTool();
   private listeners = new AbortController();
+  private history: History;
 
   constructor(mount: HTMLElement) {
     this.renderer = new Renderer(mount);
+    this.history = new History(this.workspace);
     this.bindPointerEvents();
     this.bindKeyboard();
   }
@@ -50,6 +53,23 @@ export class App {
 
   /** Commit a finished mutation. Task 12 adds history; Task 14 adds autosave. */
   commit(): void {
+    this.history.commit(this.workspace);
+    this.render();
+  }
+
+  undo(): void {
+    const ws = this.history.undo();
+    if (!ws) return;
+    this.workspace = ws;
+    this.selection.clear();
+    this.render();
+  }
+
+  redo(): void {
+    const ws = this.history.redo();
+    if (!ws) return;
+    this.workspace = ws;
+    this.selection.clear();
     this.render();
   }
 
@@ -75,6 +95,18 @@ export class App {
     window.addEventListener('keydown', (ev) => {
       const target = ev.target as HTMLElement | null;
       if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA')) return;
+      const mod = ev.metaKey || ev.ctrlKey;
+      if (mod && ev.key.toLowerCase() === 'z') {
+        ev.preventDefault();
+        if (ev.shiftKey) this.redo();
+        else this.undo();
+        return;
+      }
+      if (mod && ev.key.toLowerCase() === 'y') {
+        ev.preventDefault();
+        this.redo();
+        return;
+      }
       if (ev.key === 'Delete' || ev.key === 'Backspace') {
         ev.preventDefault();
         this.deleteSelection();

@@ -43,5 +43,15 @@ export function mountToolbar(app: App, container: HTMLElement): void {
   });
   bar.appendChild(reset);
 
+  const undo = document.createElement('button');
+  undo.textContent = 'Undo';
+  undo.addEventListener('click', () => app.undo());
+  bar.appendChild(undo);
+
+  const redo = document.createElement('button');
+  redo.textContent = 'Redo';
+  redo.addEventListener('click', () => app.redo());
+  bar.appendChild(redo);
+
   container.appendChild(bar);
 }
