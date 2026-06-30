@@ -29,6 +29,7 @@ npm run preview  # serve the built dist/ locally
 - **Shapes** — rectangle, rounded rectangle, ellipse, diamond, triangle, and text box. Pick a tool, then **drag on the canvas** to draw one at the size you want (MS-Paint style, with a live preview) — or just click for a default-sized one. The tool **stays active so you can draw several in a row**; press **Esc** (or click Select) to stop.
 - **Select & transform** — click to select, Shift-click to multi-select, drag an empty area to marquee-select; drag to move; drag the handles to resize a single shape.
 - **Text** — **select a shape and just start typing** to add a centered label (or double-click). Press **Enter**/**F2** to edit existing text, **Esc** to cancel.
+- **Connect** — link two shapes with an arrow: pick the **Arrow** tool, then drag from a source shape to a target shape (a live preview follows the cursor and the target highlights). Arrows attach to shape **edges** and **re-route automatically** when you move a shape; deleting a shape removes its arrows. Click an arrow to select it, **Delete** to remove. The Arrow tool stays active for several; **Esc** exits.
 - **Group** — select multiple shapes and group them so they move as a single unit (the **Group** button or **⌘/Ctrl+G**; **Ungroup** with **⌘/Ctrl+Shift+G**). Clicking any member selects the whole group. (Arrows join groups once connectors land in Phase 2.)
 - **Delete & reset** — remove the selection, or clear the whole canvas (both undoable).
 - **Undo / redo** — snapshot-based history.
@@ -40,6 +41,7 @@ npm run preview  # serve the built dist/ locally
 | Action | How |
 | --- | --- |
 | Draw a shape | pick a shape tool, drag on the canvas (or click for default size) |
+| Connect two shapes | pick the **Arrow** tool, drag from one shape to another |
 | Select | click / Shift-click / drag-marquee |
 | Move / resize | drag the shape / drag a handle |
 | Edit text | select + start typing, or **Enter** / **F2**, or double-click |
@@ -85,8 +87,9 @@ The design spec and implementation plan live under [`docs/superpowers/`](docs/su
 
 ## Roadmap
 
-- **Phase 2** — smart anchored connectors (arrows that follow shapes), grouping, a properties/style panel, and multiple named tabs.
-- **Phase 3** — export to JSON / PNG / SVG, open saved projects, copy/paste, alignment guides, elbow routing.
+- **Shipped** — smart anchored connectors (arrows that follow shapes) and grouping.
+- **Next** — a properties/style panel (recolor shapes & connectors, toggle arrowheads), multiple named tabs, and connector polish (drag an endpoint to re-attach, elbow routing, per-kind edge clipping).
+- **Later** — export to JSON / PNG / SVG, open saved projects, copy/paste, alignment guides.
 
 ## Tech stack
 
