@@ -258,7 +258,7 @@ describe('connector geometry', () => {
     const { tab, a, b } = tabWithTwoBoxes();
     const c = createConnector({ nodeId: a.id }, { nodeId: b.id });
     addNode(tab, c);
-    b.y = 300; // move B down
+    b.y = 400; // move B down (avoid a perfect 45° diagonal, which would exit on the corner)
     const seg = connectorSegment(tab, c)!;
     expect(seg.x1).not.toBe(100); // no longer a clean horizontal exit
     expect(seg.y2).toBeGreaterThan(50);
