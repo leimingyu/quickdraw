@@ -26,5 +26,22 @@ export function mountToolbar(app: App, container: HTMLElement): void {
     });
     bar.appendChild(btn);
   }
+
+  const sep = document.createElement('span');
+  sep.style.width = '12px';
+  bar.appendChild(sep);
+
+  const del = document.createElement('button');
+  del.textContent = 'Delete';
+  del.addEventListener('click', () => app.deleteSelection());
+  bar.appendChild(del);
+
+  const reset = document.createElement('button');
+  reset.textContent = 'Reset';
+  reset.addEventListener('click', () => {
+    if (app.activeTab.nodes.length === 0 || confirm('Clear the whole canvas?')) app.resetTab();
+  });
+  bar.appendChild(reset);
+
   container.appendChild(bar);
 }

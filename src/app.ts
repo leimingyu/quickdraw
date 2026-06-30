@@ -1,5 +1,5 @@
 import { Renderer } from './render/renderer';
-import { createWorkspace, getActiveTab } from './model/document';
+import { createWorkspace, getActiveTab, removeNodes } from './model/document';
 import type { Tab, Workspace } from './model/types';
 import type { Tool, ToolName } from './tools/types';
 
@@ -21,6 +21,7 @@ export class App {
   constructor(mount: HTMLElement) {
     this.renderer = new Renderer(mount);
     this.bindPointerEvents();
+    this.bindKeyboard();
   }
 
   get activeTab(): Tab {
@@ -49,6 +50,30 @@ export class App {
   /** Commit a finished mutation. Task 12 adds history; Task 14 adds autosave. */
   commit(): void {
     this.render();
+  }
+
+  deleteSelection(): void {
+    if (this.selection.size === 0) return;
+    removeNodes(this.activeTab, this.selection);
+    this.selection.clear();
+    this.commit();
+  }
+
+  resetTab(): void {
+    this.activeTab.nodes = [];
+    this.selection.clear();
+    this.commit();
+  }
+
+  private bindKeyboard(): void {
+    window.addEventListener('keydown', (ev) => {
+      const target = ev.target as HTMLElement | null;
+      if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA')) return;
+      if (ev.key === 'Delete' || ev.key === 'Backspace') {
+        ev.preventDefault();
+        this.deleteSelection();
+      }
+    });
   }
 
   private bindPointerEvents(): void {
