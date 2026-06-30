@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import type { Shape } from '../../src/model/types';
 import {
-  pointInShape, hitTest, shapeInRect, selectionBounds, resizeBox, zoomAt,
+  pointInShape, hitTest, shapeInRect, selectionBounds, resizeBox, zoomAt, handlePositions,
 } from '../../src/model/geometry';
 
 function shape(over: Partial<Shape>): Shape {
@@ -60,5 +60,21 @@ describe('geometry', () => {
     // world point under cursor before == after: (100-pan)/zoom
     expect((100 - vp.panX) / vp.zoom).toBeCloseTo(100);
     expect((100 - vp.panY) / vp.zoom).toBeCloseTo(100);
+  });
+
+  it('resizeBox keeps the opposite edge fixed when a NW drag hits MIN_SIZE', () => {
+    expect(resizeBox({ x: 0, y: 0, w: 10, h: 100 }, 'nw', 5, 0)).toEqual({ x: 2, y: 0, w: 8, h: 100 });
+  });
+
+  it('diamond hit test excludes corners', () => {
+    const s = shape({ kind: 'diamond' });
+    expect(pointInShape(s, { x: 50, y: 50 })).toBe(true); // center
+    expect(pointInShape(s, { x: 2, y: 2 })).toBe(false);  // corner
+  });
+
+  it('handlePositions places corner and edge handles correctly', () => {
+    const pos = handlePositions({ x: 0, y: 0, w: 100, h: 100 });
+    expect(pos.se).toEqual({ x: 100, y: 100 });
+    expect(pos.n).toEqual({ x: 50, y: 0 });
   });
 });

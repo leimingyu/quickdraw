@@ -561,8 +561,8 @@ export function resizeBox(box: Box, handle: Handle, dx: number, dy: number): Box
   if (handle.includes('s')) h += dy;
   if (handle.includes('w')) { x += dx; w -= dx; }
   if (handle.includes('n')) { y += dy; h -= dy; }
-  if (w < MIN_SIZE) w = MIN_SIZE;
-  if (h < MIN_SIZE) h = MIN_SIZE;
+  if (w < MIN_SIZE) { if (handle.includes('w')) x -= (MIN_SIZE - w); w = MIN_SIZE; }
+  if (h < MIN_SIZE) { if (handle.includes('n')) y -= (MIN_SIZE - h); h = MIN_SIZE; }
   return { x, y, w, h };
 }
 
