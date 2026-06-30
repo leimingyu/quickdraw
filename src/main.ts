@@ -1,6 +1,7 @@
 import { App } from './app';
 import { mountToolbar } from './ui/toolbar';
 import { ShapeTool } from './tools/shapeTool';
+import { SelectTool } from './tools/selectTool';
 
 const root = document.getElementById('app')!;
 root.innerHTML = '';
@@ -12,6 +13,9 @@ root.appendChild(toolbarHost);
 root.appendChild(canvasHost);
 
 const app = new App(canvasHost);
+
+app.registerTool('select', new SelectTool(app));
+app.setTool('select');
 
 for (const kind of ['rect', 'rounded', 'ellipse', 'diamond', 'triangle', 'text'] as const) {
   app.registerTool(kind, new ShapeTool(app, kind));
