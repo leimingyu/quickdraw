@@ -56,3 +56,46 @@ export function reorder(tab: Tab, id: string, dir: 'front' | 'back'): void {
 export function cloneWorkspace(ws: Workspace): Workspace {
   return structuredClone(ws);
 }
+
+/** Ids of every node sharing `node`'s group (or just the node itself if ungrouped). */
+export function groupMembers(tab: Tab, node: Shape): string[] {
+  if (!node.groupId) return [node.id];
+  const gid = node.groupId;
+  return tab.nodes.filter((n) => n.groupId === gid).map((n) => n.id);
+}
+
+/** Expand a selection to include every member of any group it touches. */
+export function expandToGroups(tab: Tab, ids: Set<string>): Set<string> {
+  const groupIds = new Set<string>();
+  for (const n of tab.nodes) {
+    if (ids.has(n.id) && n.groupId) groupIds.add(n.groupId);
+  }
+  if (groupIds.size === 0) return new Set(ids);
+  const out = new Set(ids);
+  for (const n of tab.nodes) {
+    if (n.groupId && groupIds.has(n.groupId)) out.add(n.id);
+  }
+  return out;
+}
+
+/**
+ * Assign a shared new group id to the selection (expanded to whole groups).
+ * Returns the new group id, or null if fewer than two nodes would be grouped.
+ */
+export function groupNodes(tab: Tab, ids: Set<string>): string | null {
+  const members = expandToGroups(tab, ids);
+  if (members.size < 2) return null;
+  const gid = uid('g');
+  for (const n of tab.nodes) {
+    if (members.has(n.id)) n.groupId = gid;
+  }
+  return gid;
+}
+
+/** Remove group membership from the selection (and any of its group-mates). */
+export function ungroupNodes(tab: Tab, ids: Set<string>): void {
+  const members = expandToGroups(tab, ids);
+  for (const n of tab.nodes) {
+    if (members.has(n.id)) delete n.groupId;
+  }
+}

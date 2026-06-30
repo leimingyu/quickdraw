@@ -1,6 +1,7 @@
 import type { App } from '../app';
 import type { Shape } from '../model/types';
 import { hitTest, shapeInRect, handlePositions, resizeBox, type Box, type Handle, type Point } from '../model/geometry';
+import { groupMembers, expandToGroups } from '../model/document';
 import type { Tool } from './types';
 
 type Mode = 'idle' | 'marquee' | 'move' | 'resize';
@@ -31,8 +32,10 @@ export class SelectTool implements Tool {
     }
     const hit = hitTest(this.app.activeTab.nodes as Shape[], world);
     if (hit) {
-      if (ev.shiftKey) this.toggle(hit.id);
-      else if (!this.app.selection.has(hit.id)) this.app.selection = new Set([hit.id]);
+      if (ev.shiftKey) this.toggleGroup(hit);
+      else if (!this.app.selection.has(hit.id)) {
+        this.app.selection = new Set(groupMembers(this.app.activeTab, hit));
+      }
       this.mode = 'move';
       this.last = world;
       this.moved = false;
@@ -81,16 +84,22 @@ export class SelectTool implements Tool {
   }
 
   private applyMarquee(world: Point): void {
-    this.app.selection = new Set(
+    const hits = new Set(
       (this.app.activeTab.nodes as Shape[])
         .filter((s) => shapeInRect(s, this.marqueeBox(world)))
         .map((s) => s.id),
     );
+    this.app.selection = expandToGroups(this.app.activeTab, hits);
   }
 
-  private toggle(id: string): void {
-    if (this.app.selection.has(id)) this.app.selection.delete(id);
-    else this.app.selection.add(id);
+  /** Toggle a shape — and its whole group — in or out of the selection. */
+  private toggleGroup(hit: Shape): void {
+    const members = groupMembers(this.app.activeTab, hit);
+    const allSelected = members.every((id) => this.app.selection.has(id));
+    for (const id of members) {
+      if (allSelected) this.app.selection.delete(id);
+      else this.app.selection.add(id);
+    }
   }
 
   private marqueeBox(world: Point): Box {

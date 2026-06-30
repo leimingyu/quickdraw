@@ -29,6 +29,7 @@ npm run preview  # serve the built dist/ locally
 - **Shapes** — rectangle, rounded rectangle, ellipse, diamond, triangle, and text box. Pick a tool, then **drag on the canvas** to draw one at the size you want (MS-Paint style, with a live preview) — or just click for a default-sized one. The tool **stays active so you can draw several in a row**; press **Esc** (or click Select) to stop.
 - **Select & transform** — click to select, Shift-click to multi-select, drag an empty area to marquee-select; drag to move; drag the handles to resize a single shape.
 - **Text** — **select a shape and just start typing** to add a centered label (or double-click). Press **Enter**/**F2** to edit existing text, **Esc** to cancel.
+- **Group** — select multiple shapes and group them so they move as a single unit (the **Group** button or **⌘/Ctrl+G**; **Ungroup** with **⌘/Ctrl+Shift+G**). Clicking any member selects the whole group. (Arrows join groups once connectors land in Phase 2.)
 - **Delete & reset** — remove the selection, or clear the whole canvas (both undoable).
 - **Undo / redo** — snapshot-based history.
 - **Pan & zoom** — zoom buttons, ⌘/Ctrl + scroll to zoom at the cursor, hold **Space** (or middle-mouse) and drag to pan, **100%** to reset the view.
@@ -45,6 +46,7 @@ npm run preview  # serve the built dist/ locally
 | Commit / cancel text | **Enter** / click away &nbsp;·&nbsp; **Esc** |
 | Exit draw mode / deselect | **Esc** |
 | Delete selection | **Delete** / **Backspace** |
+| Group / ungroup | **⌘/Ctrl+G** / **⌘/Ctrl+Shift+G** |
 | Undo / redo | **⌘/Ctrl+Z** / **⌘/Ctrl+Shift+Z** (or **Ctrl+Y**) |
 | Zoom | **⌘/Ctrl + scroll**, or the −/+/100% buttons |
 | Pan | hold **Space** (or middle-mouse) and drag |

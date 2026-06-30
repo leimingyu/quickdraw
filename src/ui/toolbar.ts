@@ -43,6 +43,18 @@ export function mountToolbar(app: App, container: HTMLElement): void {
   });
   bar.appendChild(reset);
 
+  const group = document.createElement('button');
+  group.textContent = 'Group';
+  group.title = 'Group selection (⌘/Ctrl+G)';
+  group.addEventListener('click', () => app.group());
+  bar.appendChild(group);
+
+  const ungroup = document.createElement('button');
+  ungroup.textContent = 'Ungroup';
+  ungroup.title = 'Ungroup selection (⌘/Ctrl+Shift+G)';
+  ungroup.addEventListener('click', () => app.ungroup());
+  bar.appendChild(ungroup);
+
   const undo = document.createElement('button');
   undo.textContent = 'Undo';
   undo.addEventListener('click', () => app.undo());

@@ -3,6 +3,7 @@ import { resetIds } from '../../src/util/id';
 import {
   createShape, createTab, createWorkspace, getActiveTab,
   findNode, addNode, removeNodes, reorder, cloneWorkspace,
+  groupNodes, ungroupNodes, expandToGroups, groupMembers,
 } from '../../src/model/document';
 
 beforeEach(() => resetIds());
@@ -55,5 +56,60 @@ describe('document model', () => {
     const copy = cloneWorkspace(ws);
     copy.tabs[0].nodes[0].x = 999;
     expect(getActiveTab(ws).nodes[0].x).toBe(0);
+  });
+});
+
+describe('grouping', () => {
+  it('groupNodes assigns a shared group id to the selection', () => {
+    const tab = createTab();
+    const a = createShape('rect', 0, 0);
+    const b = createShape('rect', 50, 0);
+    addNode(tab, a);
+    addNode(tab, b);
+    const gid = groupNodes(tab, new Set([a.id, b.id]));
+    expect(gid).toBeTruthy();
+    expect(a.groupId).toBe(gid);
+    expect(b.groupId).toBe(gid);
+  });
+
+  it('groupNodes returns null and changes nothing for fewer than two nodes', () => {
+    const tab = createTab();
+    const a = createShape('rect', 0, 0);
+    addNode(tab, a);
+    expect(groupNodes(tab, new Set([a.id]))).toBeNull();
+    expect(a.groupId).toBeUndefined();
+  });
+
+  it('expandToGroups pulls in every member from one member', () => {
+    const tab = createTab();
+    const a = createShape('rect', 0, 0);
+    const b = createShape('rect', 50, 0);
+    const c = createShape('rect', 100, 0);
+    [a, b, c].forEach((s) => addNode(tab, s));
+    groupNodes(tab, new Set([a.id, b.id]));
+    expect(expandToGroups(tab, new Set([a.id]))).toEqual(new Set([a.id, b.id]));
+  });
+
+  it('groupMembers returns the group for a member, or just itself when ungrouped', () => {
+    const tab = createTab();
+    const a = createShape('rect', 0, 0);
+    const b = createShape('rect', 50, 0);
+    const lone = createShape('rect', 200, 0);
+    [a, b, lone].forEach((s) => addNode(tab, s));
+    groupNodes(tab, new Set([a.id, b.id]));
+    expect(new Set(groupMembers(tab, a))).toEqual(new Set([a.id, b.id]));
+    expect(groupMembers(tab, lone)).toEqual([lone.id]);
+  });
+
+  it('ungroupNodes clears membership for the whole group from one member', () => {
+    const tab = createTab();
+    const a = createShape('rect', 0, 0);
+    const b = createShape('rect', 50, 0);
+    addNode(tab, a);
+    addNode(tab, b);
+    groupNodes(tab, new Set([a.id, b.id]));
+    ungroupNodes(tab, new Set([a.id]));
+    expect(a.groupId).toBeUndefined();
+    expect(b.groupId).toBeUndefined();
   });
 });

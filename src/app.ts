@@ -1,5 +1,5 @@
 import { Renderer } from './render/renderer';
-import { createWorkspace, getActiveTab, removeNodes } from './model/document';
+import { createWorkspace, getActiveTab, removeNodes, groupNodes, ungroupNodes, expandToGroups } from './model/document';
 import type { Tab, Workspace } from './model/types';
 import type { Tool, ToolName } from './tools/types';
 import { History } from './history/history';
@@ -88,6 +88,21 @@ export class App {
     this.autosave.schedule(this.workspace);
   }
 
+  /** Group the current selection into one movable unit. No-op for < 2 nodes. */
+  group(): void {
+    const gid = groupNodes(this.activeTab, this.selection);
+    if (!gid) return;
+    this.selection = expandToGroups(this.activeTab, this.selection);
+    this.commit();
+  }
+
+  /** Dissolve the group(s) the current selection belongs to. */
+  ungroup(): void {
+    if (this.selection.size === 0) return;
+    ungroupNodes(this.activeTab, this.selection);
+    this.commit();
+  }
+
   deleteSelection(): void {
     if (this.selection.size === 0) return;
     removeNodes(this.activeTab, this.selection);
@@ -153,6 +168,12 @@ export class App {
       if (mod && ev.key.toLowerCase() === 'y') {
         ev.preventDefault();
         this.redo();
+        return;
+      }
+      if (mod && ev.key.toLowerCase() === 'g') {
+        ev.preventDefault();
+        if (ev.shiftKey) this.ungroup();
+        else this.group();
         return;
       }
       if (ev.key === 'Delete' || ev.key === 'Backspace') {
