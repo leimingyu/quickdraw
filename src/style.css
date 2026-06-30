@@ -1,3 +1,8 @@
 * { box-sizing: border-box; }
 html, body, #app { margin: 0; height: 100%; }
 body { font: 14px system-ui, sans-serif; }
+#app { display: flex; flex-direction: column; }
+.toolbar { display: flex; gap: 4px; padding: 6px; border-bottom: 1px solid #ddd; }
+.toolbar button { padding: 4px 10px; cursor: pointer; }
+.toolbar button.active { background: #3b82f6; color: #fff; }
+.canvas-host { flex: 1; min-height: 0; }
