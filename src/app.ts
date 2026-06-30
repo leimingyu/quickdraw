@@ -3,6 +3,7 @@ import { createWorkspace, getActiveTab, removeNodes } from './model/document';
 import type { Tab, Workspace } from './model/types';
 import type { Tool, ToolName } from './tools/types';
 import { History } from './history/history';
+import { zoomAt } from './model/geometry';
 
 class NoopTool implements Tool {
   onPointerDown(): void {}
@@ -20,12 +21,16 @@ export class App {
   private current: Tool = new NoopTool();
   private listeners = new AbortController();
   private history: History;
+  private spaceDown = false;
+  private panning = false;
+  private panLast = { x: 0, y: 0 };
 
   constructor(mount: HTMLElement) {
     this.renderer = new Renderer(mount);
     this.history = new History(this.workspace);
     this.bindPointerEvents();
     this.bindKeyboard();
+    this.bindViewport();
   }
 
   get activeTab(): Tab {
@@ -86,6 +91,26 @@ export class App {
     this.commit();
   }
 
+  zoomBy(factor: number, screenX?: number, screenY?: number): void {
+    const rect = this.renderer.svg.getBoundingClientRect();
+    const sx = screenX ?? rect.width / 2;
+    const sy = screenY ?? rect.height / 2;
+    this.activeTab.viewport = zoomAt(this.activeTab.viewport, factor, sx, sy);
+    this.render();
+  }
+
+  panBy(dx: number, dy: number): void {
+    const vp = this.activeTab.viewport;
+    vp.panX += dx;
+    vp.panY += dy;
+    this.render();
+  }
+
+  resetView(): void {
+    this.activeTab.viewport = { panX: 0, panY: 0, zoom: 1 };
+    this.render();
+  }
+
   /** Detach all global (window) listeners this App registered. */
   destroy(): void {
     this.listeners.abort();
@@ -112,6 +137,37 @@ export class App {
         this.deleteSelection();
       }
     }, { signal: this.listeners.signal });
+  }
+
+  private bindViewport(): void {
+    const svg = this.renderer.svg;
+    const sig = { signal: this.listeners.signal };
+    svg.addEventListener('wheel', (ev) => {
+      if (ev.ctrlKey || ev.metaKey) {
+        ev.preventDefault();
+        const rect = svg.getBoundingClientRect();
+        const factor = ev.deltaY < 0 ? 1.1 : 1 / 1.1;
+        this.zoomBy(factor, ev.clientX - rect.left, ev.clientY - rect.top);
+      }
+    }, { passive: false, signal: this.listeners.signal });
+
+    window.addEventListener('keydown', (ev) => { if (ev.code === 'Space') this.spaceDown = true; }, sig);
+    window.addEventListener('keyup', (ev) => { if (ev.code === 'Space') this.spaceDown = false; }, sig);
+
+    svg.addEventListener('pointerdown', (ev) => {
+      if (this.spaceDown || ev.button === 1) {
+        this.panning = true;
+        this.panLast = { x: ev.clientX, y: ev.clientY };
+        ev.stopImmediatePropagation();
+      }
+    }, { capture: true, signal: this.listeners.signal });
+    svg.addEventListener('pointermove', (ev) => {
+      if (!this.panning) return;
+      this.panBy(ev.clientX - this.panLast.x, ev.clientY - this.panLast.y);
+      this.panLast = { x: ev.clientX, y: ev.clientY };
+      ev.stopImmediatePropagation();
+    }, { capture: true, signal: this.listeners.signal });
+    svg.addEventListener('pointerup', () => { this.panning = false; }, { capture: true, signal: this.listeners.signal });
   }
 
   private bindPointerEvents(): void {

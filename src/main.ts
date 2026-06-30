@@ -1,5 +1,6 @@
 import { App } from './app';
 import { mountToolbar } from './ui/toolbar';
+import { mountZoomControls } from './ui/zoom';
 import { ShapeTool } from './tools/shapeTool';
 import { SelectTool } from './tools/selectTool';
 
@@ -22,4 +23,5 @@ for (const kind of ['rect', 'rounded', 'ellipse', 'diamond', 'triangle', 'text']
 }
 
 mountToolbar(app, toolbarHost);
+mountZoomControls(app, toolbarHost.querySelector('.toolbar')!);
 app.render();
