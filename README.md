@@ -26,7 +26,7 @@ npm run preview  # serve the built dist/ locally
 
 ## Features (Phase 1)
 
-- **Shapes** — rectangle, rounded rectangle, ellipse, diamond, triangle, and text box. Pick a tool, click the canvas to place one.
+- **Shapes** — rectangle, rounded rectangle, ellipse, diamond, triangle, and text box. Pick a tool, then **drag on the canvas** to draw one at the size you want (MS-Paint style, with a live preview) — or just click for a default-sized one.
 - **Select & transform** — click to select, Shift-click to multi-select, drag an empty area to marquee-select; drag to move; drag the handles to resize a single shape.
 - **Text** — **select a shape and just start typing** to add a centered label (or double-click). Press **Enter**/**F2** to edit existing text, **Esc** to cancel.
 - **Delete & reset** — remove the selection, or clear the whole canvas (both undoable).
@@ -38,7 +38,7 @@ npm run preview  # serve the built dist/ locally
 
 | Action | How |
 | --- | --- |
-| Place a shape | pick a shape tool, click the canvas |
+| Draw a shape | pick a shape tool, drag on the canvas (or click for default size) |
 | Select | click / Shift-click / drag-marquee |
 | Move / resize | drag the shape / drag a handle |
 | Edit text | select + start typing, or **Enter** / **F2**, or double-click |
