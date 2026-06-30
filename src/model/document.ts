@@ -56,7 +56,23 @@ export function addNode(tab: Tab, node: Node): void {
 }
 
 export function removeNodes(tab: Tab, ids: Set<string>): void {
-  tab.nodes = tab.nodes.filter((n) => !ids.has(n.id));
+  const kept = tab.nodes.filter((n) => !ids.has(n.id));
+  tab.nodes = kept.filter((n) => {
+    if (!isConnector(n)) return true;
+    const fromGone = isAttached(n.from) && ids.has(n.from.nodeId);
+    const toGone = isAttached(n.to) && ids.has(n.to.nodeId);
+    return !fromGone && !toGone;
+  });
+}
+
+export function pruneDanglingConnectors(tab: Tab): void {
+  const shapeIds = new Set(tab.nodes.filter(isShape).map((s) => s.id));
+  tab.nodes = tab.nodes.filter((n) => {
+    if (!isConnector(n)) return true;
+    const fromOk = !isAttached(n.from) || shapeIds.has(n.from.nodeId);
+    const toOk = !isAttached(n.to) || shapeIds.has(n.to.nodeId);
+    return fromOk && toOk;
+  });
 }
 
 export function reorder(tab: Tab, id: string, dir: 'front' | 'back'): void {

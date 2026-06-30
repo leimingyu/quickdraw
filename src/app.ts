@@ -1,5 +1,5 @@
 import { Renderer } from './render/renderer';
-import { createWorkspace, getActiveTab, removeNodes, groupNodes, ungroupNodes, expandToGroups } from './model/document';
+import { createWorkspace, getActiveTab, removeNodes, groupNodes, ungroupNodes, expandToGroups, pruneDanglingConnectors } from './model/document';
 import type { Tab, Workspace } from './model/types';
 import type { Tool, ToolName } from './tools/types';
 import { History } from './history/history';
@@ -30,6 +30,7 @@ export class App {
 
   constructor(mount: HTMLElement, initial?: Workspace) {
     this.workspace = initial ?? createWorkspace();
+    this.workspace.tabs.forEach(pruneDanglingConnectors);
     this.renderer = new Renderer(mount);
     this.history = new History(this.workspace);
     this.bindPointerEvents();
