@@ -1,7 +1,8 @@
 import type { App } from '../app';
-import type { Shape } from '../model/types';
+import type { Node, Shape } from '../model/types';
 import { hitTest, shapeInRect, handlePositions, resizeBox, type Box, type Handle, type Point } from '../model/geometry';
-import { groupMembers, expandToGroups, isShape } from '../model/document';
+import { groupMembers, expandToGroups, isShape, isConnector } from '../model/document';
+import { connectorHit } from '../render/connector';
 import type { Tool } from './types';
 
 type Mode = 'idle' | 'marquee' | 'move' | 'resize';
@@ -30,7 +31,7 @@ export class SelectTool implements Tool {
         return;
       }
     }
-    const hit = hitTest(this.app.activeTab.nodes.filter(isShape), world);
+    const hit = this.hitNode(world);
     if (hit) {
       if (ev.shiftKey) this.toggleGroup(hit);
       else if (!this.app.selection.has(hit.id)) {
@@ -84,16 +85,34 @@ export class SelectTool implements Tool {
   }
 
   private applyMarquee(world: Point): void {
-    const hits = new Set(
-      this.app.activeTab.nodes.filter(isShape)
-        .filter((s) => shapeInRect(s, this.marqueeBox(world)))
-        .map((s) => s.id),
+    const box = this.marqueeBox(world);
+    const shapeIds = new Set(
+      this.app.activeTab.nodes.filter(isShape).filter((s) => shapeInRect(s, box)).map((s) => s.id),
     );
-    this.app.selection = expandToGroups(this.app.activeTab, hits);
+    const sel = expandToGroups(this.app.activeTab, shapeIds);
+    for (const n of this.app.activeTab.nodes) {
+      if (isConnector(n)) {
+        const fromIn = 'nodeId' in n.from ? sel.has(n.from.nodeId) : false;
+        const toIn = 'nodeId' in n.to ? sel.has(n.to.nodeId) : false;
+        if (fromIn && toIn) sel.add(n.id);
+      }
+    }
+    this.app.selection = sel;
   }
 
-  /** Toggle a shape — and its whole group — in or out of the selection. */
-  private toggleGroup(hit: Shape): void {
+  private hitNode(world: Point) {
+    const shape = hitTest(this.app.activeTab.nodes.filter(isShape), world);
+    if (shape) return shape;
+    const tol = 8 / this.app.activeTab.viewport.zoom;
+    const connectors = this.app.activeTab.nodes.filter(isConnector);
+    for (let i = connectors.length - 1; i >= 0; i--) {
+      if (connectorHit(this.app.activeTab, connectors[i], world, tol)) return connectors[i];
+    }
+    return undefined;
+  }
+
+  /** Toggle a node — and its whole group — in or out of the selection. */
+  private toggleGroup(hit: Node): void {
     const members = groupMembers(this.app.activeTab, hit);
     const allSelected = members.every((id) => this.app.selection.has(id));
     for (const id of members) {
