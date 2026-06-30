@@ -6,3 +6,14 @@ body { font: 14px system-ui, sans-serif; }
 .toolbar button { padding: 4px 10px; cursor: pointer; }
 .toolbar button.active { background: #3b82f6; color: #fff; }
 .canvas-host { flex: 1; min-height: 0; }
+.app-body { display: flex; flex: 1; min-height: 0; }
+.canvas-host { flex: 1; min-width: 0; }
+.props-host { flex: 0 0 auto; }
+.props { width: 200px; height: 100%; box-sizing: border-box; padding: 8px;
+  border-left: 1px solid #ddd; background: #fff; overflow-y: auto;
+  display: flex; flex-direction: column; gap: 8px; }
+.props-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.props-label { color: #444; }
+.props button { padding: 2px 8px; cursor: pointer; }
+.props button.active { background: #3b82f6; color: #fff; }
+.props input[type="number"] { width: 56px; }
