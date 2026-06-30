@@ -5,6 +5,10 @@ node_modules/
 dist/
 dist-ssr/
 
+# tsc emit alongside source (no outDir/noEmit set)
+src/**/*.js
+tests/**/*.js
+
 # Vite / Vitest
 .vite/
 coverage/
