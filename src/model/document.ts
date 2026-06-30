@@ -69,8 +69,10 @@ export function pruneDanglingConnectors(tab: Tab): void {
   const shapeIds = new Set(tab.nodes.filter(isShape).map((s) => s.id));
   tab.nodes = tab.nodes.filter((n) => {
     if (!isConnector(n)) return true;
-    const fromOk = !isAttached(n.from) || shapeIds.has(n.from.nodeId);
-    const toOk = !isAttached(n.to) || shapeIds.has(n.to.nodeId);
+    // v1 never persists a user-created floating endpoint; a connector with a
+    // non-attached or missing endpoint is a leaked live preview — drop it.
+    const fromOk = isAttached(n.from) && shapeIds.has(n.from.nodeId);
+    const toOk = isAttached(n.to) && shapeIds.has(n.to.nodeId);
     return fromOk && toOk;
   });
 }

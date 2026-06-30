@@ -30,7 +30,7 @@ export class Renderer {
     marker.setAttribute('orient', 'auto-start-reverse');
     const arrow = document.createElementNS(NS, 'path');
     arrow.setAttribute('d', 'M0,0 L10,5 L0,10 z');
-    arrow.setAttribute('fill', '#1e1e1e');
+    arrow.setAttribute('fill', 'context-stroke');
     marker.appendChild(arrow);
     defs.appendChild(marker);
     this.svg.appendChild(defs);

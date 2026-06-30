@@ -253,6 +253,7 @@ export class App {
       svg.releasePointerCapture(ev.pointerId);
     }, sig);
     svg.addEventListener('dblclick', (ev) => this.current.onDoubleClick?.(this.world(ev), ev), sig);
+    svg.addEventListener('pointercancel', () => this.current.onDeactivate?.(), sig);
   }
 
   private world(ev: { clientX: number; clientY: number }) {

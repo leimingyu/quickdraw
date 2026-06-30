@@ -37,4 +37,13 @@ describe('connector delete-cascade and prune', () => {
     pruneDanglingConnectors(tab);
     expect(tab.nodes.find((n) => n.id === c.id)).toBeUndefined();
   });
+
+  it('pruneDanglingConnectors drops a leaked floating-endpoint connector', () => {
+    const tab = createTab();
+    const a = createShape('rect', 0, 0, 100, 100);
+    addNode(tab, a);
+    addNode(tab, createConnector({ nodeId: a.id }, { x: 200, y: 50 })); // leaked preview
+    pruneDanglingConnectors(tab);
+    expect(tab.nodes.filter(isConnector)).toHaveLength(0);
+  });
 });

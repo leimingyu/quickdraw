@@ -79,4 +79,14 @@ describe('ConnectorTool', () => {
     expect(app.activeTab.nodes.filter(isConnector)).toHaveLength(0);
     expect(app.highlightId).toBeUndefined();
   });
+
+  it('a pointercancel during a drag cleans up the preview', () => {
+    twoShapes();
+    tool.onPointerDown({ x: 50, y: 50 });
+    tool.onPointerMove({ x: 200, y: 50 });
+    expect(app.activeTab.nodes.filter(isConnector)).toHaveLength(1);
+    app.renderer.svg.dispatchEvent(new Event('pointercancel'));
+    expect(app.activeTab.nodes.filter(isConnector)).toHaveLength(0);
+    expect(app.highlightId).toBeUndefined();
+  });
 });
