@@ -4,6 +4,7 @@ import type { Tab, Workspace } from './model/types';
 import type { Tool, ToolName } from './tools/types';
 import { History } from './history/history';
 import { zoomAt } from './model/geometry';
+import { Autosave } from './storage/autosave';
 
 class NoopTool implements Tool {
   onPointerDown(): void {}
@@ -12,7 +13,7 @@ class NoopTool implements Tool {
 }
 
 export class App {
-  workspace: Workspace = createWorkspace();
+  workspace: Workspace;
   selection = new Set<string>();
   readonly renderer: Renderer;
   currentToolName: ToolName = 'select';
@@ -21,11 +22,13 @@ export class App {
   private current: Tool = new NoopTool();
   private listeners = new AbortController();
   private history: History;
+  private autosave = new Autosave();
   private spaceDown = false;
   private panning = false;
   private panLast = { x: 0, y: 0 };
 
-  constructor(mount: HTMLElement) {
+  constructor(mount: HTMLElement, initial?: Workspace) {
+    this.workspace = initial ?? createWorkspace();
     this.renderer = new Renderer(mount);
     this.history = new History(this.workspace);
     this.bindPointerEvents();
@@ -59,6 +62,7 @@ export class App {
   /** Commit a finished mutation. Task 12 adds history; Task 14 adds autosave. */
   commit(): void {
     this.history.commit(this.workspace);
+    this.autosave.schedule(this.workspace);
     this.render();
   }
 
@@ -97,22 +101,26 @@ export class App {
     const sy = screenY ?? rect.height / 2;
     this.activeTab.viewport = zoomAt(this.activeTab.viewport, factor, sx, sy);
     this.render();
+    this.autosave.schedule(this.workspace);
   }
 
   panBy(dx: number, dy: number): void {
     const vp = this.activeTab.viewport;
     this.activeTab.viewport = { ...vp, panX: vp.panX + dx, panY: vp.panY + dy };
     this.render();
+    this.autosave.schedule(this.workspace);
   }
 
   resetView(): void {
     this.activeTab.viewport = { panX: 0, panY: 0, zoom: 1 };
     this.render();
+    this.autosave.schedule(this.workspace);
   }
 
   /** Detach all global (window) listeners this App registered. */
   destroy(): void {
     this.listeners.abort();
+    this.autosave.cancel();
   }
 
   private bindKeyboard(): void {
