@@ -56,14 +56,16 @@ export function mountToolbar(app: App, container: HTMLElement): void {
   ungroup.addEventListener('click', () => app.ungroup());
   bar.appendChild(ungroup);
 
+  const isMac = /mac/i.test(navigator.platform || navigator.userAgent || '');
+
   const undo = document.createElement('button');
-  undo.textContent = 'Undo';
+  undo.textContent = isMac ? 'Undo ⌘Z' : 'Undo Ctrl+Z';
   undo.title = 'Undo (⌘Z / Ctrl+Z)';
   undo.addEventListener('click', () => app.undo());
   bar.appendChild(undo);
 
   const redo = document.createElement('button');
-  redo.textContent = 'Redo';
+  redo.textContent = isMac ? 'Redo ⌘⇧Z' : 'Redo Ctrl+Y';
   redo.title = 'Redo (⌘⇧Z / Ctrl+Y)';
   redo.addEventListener('click', () => app.redo());
   bar.appendChild(redo);
