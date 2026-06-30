@@ -45,11 +45,27 @@ describe('ShapeTool', () => {
     expect(s.y + s.h / 2).toBeCloseTo(150);
   });
 
-  it('selects the new shape and reverts to the select tool', () => {
+  it('selects the new shape and stays on the shape tool for continuous drawing', () => {
     const tool = makeTool('ellipse');
     click(tool, { x: 50, y: 50 });
-    expect(app.currentToolName).toBe('select');
+    expect(app.currentToolName).toBe('ellipse');
     expect(app.selection.has(app.activeTab.nodes[0].id)).toBe(true);
+  });
+
+  it('keeps drawing the same shape without re-selecting the tool', () => {
+    const tool = makeTool('rect');
+    drag(tool, { x: 0, y: 0 }, { x: 100, y: 80 });
+    drag(tool, { x: 200, y: 0 }, { x: 320, y: 90 });
+    expect(app.activeTab.nodes).toHaveLength(2);
+    expect(app.currentToolName).toBe('rect');
+  });
+
+  it('Escape leaves draw mode and returns to the select tool', () => {
+    const tool = makeTool('rect');
+    drag(tool, { x: 0, y: 0 }, { x: 100, y: 80 });
+    expect(app.currentToolName).toBe('rect');
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+    expect(app.currentToolName).toBe('select');
   });
 
   it('drag draws a shape sized from the start corner to the end corner', () => {

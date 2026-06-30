@@ -133,6 +133,16 @@ export class App {
     window.addEventListener('keydown', (ev) => {
       const target = ev.target as HTMLElement | null;
       if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA')) return;
+      if (ev.key === 'Escape') {
+        ev.preventDefault();
+        if (this.currentToolName !== 'select') {
+          this.setTool('select'); // leave draw mode
+        } else {
+          this.selection.clear();
+          this.render();
+        }
+        return;
+      }
       const mod = ev.metaKey || ev.ctrlKey;
       if (mod && ev.key.toLowerCase() === 'z') {
         ev.preventDefault();

@@ -69,6 +69,7 @@ export class ShapeTool implements Tool {
     }
     this.start = null;
     this.shape = null;
-    this.app.setTool('select');
+    // Stay on the same shape tool so you can keep drawing. Press Esc (or click
+    // Select) to switch back to the select tool.
   }
 }

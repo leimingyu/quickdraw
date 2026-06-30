@@ -26,7 +26,7 @@ npm run preview  # serve the built dist/ locally
 
 ## Features (Phase 1)
 
-- **Shapes** — rectangle, rounded rectangle, ellipse, diamond, triangle, and text box. Pick a tool, then **drag on the canvas** to draw one at the size you want (MS-Paint style, with a live preview) — or just click for a default-sized one.
+- **Shapes** — rectangle, rounded rectangle, ellipse, diamond, triangle, and text box. Pick a tool, then **drag on the canvas** to draw one at the size you want (MS-Paint style, with a live preview) — or just click for a default-sized one. The tool **stays active so you can draw several in a row**; press **Esc** (or click Select) to stop.
 - **Select & transform** — click to select, Shift-click to multi-select, drag an empty area to marquee-select; drag to move; drag the handles to resize a single shape.
 - **Text** — **select a shape and just start typing** to add a centered label (or double-click). Press **Enter**/**F2** to edit existing text, **Esc** to cancel.
 - **Delete & reset** — remove the selection, or clear the whole canvas (both undoable).
@@ -43,6 +43,7 @@ npm run preview  # serve the built dist/ locally
 | Move / resize | drag the shape / drag a handle |
 | Edit text | select + start typing, or **Enter** / **F2**, or double-click |
 | Commit / cancel text | **Enter** / click away &nbsp;·&nbsp; **Esc** |
+| Exit draw mode / deselect | **Esc** |
 | Delete selection | **Delete** / **Backspace** |
 | Undo / redo | **⌘/Ctrl+Z** / **⌘/Ctrl+Shift+Z** (or **Ctrl+Y**) |
 | Zoom | **⌘/Ctrl + scroll**, or the −/+/100% buttons |
