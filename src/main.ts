@@ -5,7 +5,6 @@ import { mountProperties } from './ui/properties';
 import { ShapeTool } from './tools/shapeTool';
 import { SelectTool } from './tools/selectTool';
 import { ConnectorTool } from './tools/connectorTool';
-import { Autosave } from './storage/autosave';
 
 const root = document.getElementById('app')!;
 root.innerHTML = '';
@@ -20,8 +19,9 @@ propsHost.className = 'props-host';
 bodyHost.append(canvasHost, propsHost);
 root.append(toolbarHost, bodyHost);
 
-const saved = new Autosave().load();
-const app = new App(canvasHost, saved ?? undefined);
+// Start every page load with a fresh, empty canvas — the previous drawing is
+// not auto-restored from the browser. (Explicit save/open to disk is Phase 3.)
+const app = new App(canvasHost);
 
 app.registerTool('select', new SelectTool(app));
 app.setTool('select');
