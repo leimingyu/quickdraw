@@ -1,6 +1,6 @@
 import type { App } from '../app';
 import type { Shape } from '../model/types';
-import { hitTest, shapeInRect, type Box, type Handle, type Point } from '../model/geometry';
+import { hitTest, shapeInRect, handlePositions, resizeBox, type Box, type Handle, type Point } from '../model/geometry';
 import type { Tool } from './types';
 
 type Mode = 'idle' | 'marquee' | 'move' | 'resize';
@@ -11,11 +11,24 @@ export class SelectTool implements Tool {
   private last: Point = { x: 0, y: 0 };
   private moved = false;
   protected activeHandle: Handle | null = null;
+  private resizeShape: Shape | null = null;
+  private startBox: Box = { x: 0, y: 0, w: 0, h: 0 };
 
   constructor(protected app: App) {}
 
   onPointerDown(world: Point, ev: PointerEvent): void {
     this.start = world;
+    const handle = this.handleAt(world);
+    if (handle) {
+      const s = this.singleSelected();
+      if (s) {
+        this.mode = 'resize';
+        this.activeHandle = handle;
+        this.resizeShape = s;
+        this.startBox = { x: s.x, y: s.y, w: s.w, h: s.h };
+        return;
+      }
+    }
     const hit = hitTest(this.app.activeTab.nodes as Shape[], world);
     if (hit) {
       if (ev.shiftKey) this.toggle(hit.id);
@@ -32,6 +45,14 @@ export class SelectTool implements Tool {
   }
 
   onPointerMove(world: Point, _ev: PointerEvent): void {
+    if (this.mode === 'resize' && this.resizeShape && this.activeHandle) {
+      const dx = world.x - this.start.x;
+      const dy = world.y - this.start.y;
+      const box = resizeBox(this.startBox, this.activeHandle, dx, dy);
+      Object.assign(this.resizeShape, box);
+      this.app.render();
+      return;
+    }
     if (this.mode === 'move') {
       const dx = world.x - this.last.x;
       const dy = world.y - this.last.y;
@@ -50,9 +71,12 @@ export class SelectTool implements Tool {
 
   onPointerUp(world: Point, _ev: PointerEvent): void {
     if (this.mode === 'marquee') this.applyMarquee(world);
+    else if (this.mode === 'resize') this.app.commit();
     else if (this.mode === 'move' && this.moved) this.app.commit();
     this.mode = 'idle';
     this.moved = false;
+    this.resizeShape = null;
+    this.activeHandle = null;
     this.app.render();
   }
 
@@ -76,5 +100,22 @@ export class SelectTool implements Tool {
       w: Math.abs(world.x - this.start.x),
       h: Math.abs(world.y - this.start.y),
     };
+  }
+
+  private singleSelected(): Shape | null {
+    if (this.app.selection.size !== 1) return null;
+    const id = [...this.app.selection][0];
+    return (this.app.activeTab.nodes as Shape[]).find((s) => s.id === id) ?? null;
+  }
+
+  private handleAt(world: Point): Handle | null {
+    const s = this.singleSelected();
+    if (!s) return null;
+    const tol = 8 / this.app.activeTab.viewport.zoom; // screen-constant tolerance in world units
+    const pos = handlePositions({ x: s.x, y: s.y, w: s.w, h: s.h });
+    for (const [handle, p] of Object.entries(pos)) {
+      if (Math.abs(world.x - p.x) <= tol && Math.abs(world.y - p.y) <= tol) return handle as Handle;
+    }
+    return null;
   }
 }
