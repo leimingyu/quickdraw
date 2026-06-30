@@ -117,12 +117,22 @@ export class SelectTool implements Tool {
     this.openEditor(hit);
   }
 
-  private openEditor(s: Shape): void {
+  /**
+   * Open the text editor on the single selected shape. With `initial`, start a
+   * fresh label seeded with that character (type-to-edit); without it, edit the
+   * shape's existing text.
+   */
+  beginEdit(initial?: string): void {
+    const s = this.singleSelected();
+    if (s) this.openEditor(s, initial);
+  }
+
+  private openEditor(s: Shape, seed?: string): void {
     const host = this.app.renderer.svg.parentElement;
     if (!host) return;
     const input = document.createElement('input');
     input.className = 'text-editor';
-    input.value = s.text ?? '';
+    input.value = seed !== undefined ? seed : s.text ?? '';
     const vp = this.app.activeTab.viewport;
     input.style.position = 'absolute';
     input.style.left = `${vp.panX + s.x * vp.zoom}px`;
@@ -131,7 +141,12 @@ export class SelectTool implements Tool {
     host.style.position = 'relative';
     host.appendChild(input);
     input.focus();
-    input.select();
+    if (seed !== undefined) {
+      const end = input.value.length;
+      input.setSelectionRange(end, end);
+    } else {
+      input.select();
+    }
     let done = false;
     const commit = (write: boolean) => {
       if (done) return;

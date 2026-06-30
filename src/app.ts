@@ -148,6 +148,19 @@ export class App {
       if (ev.key === 'Delete' || ev.key === 'Backspace') {
         ev.preventDefault();
         this.deleteSelection();
+        return;
+      }
+      // Type-to-edit: with a single shape selected in the select tool, Enter/F2
+      // edits its text and any printable key starts a fresh centered label.
+      // (Space is excluded so it keeps panning; labels just can't start with one.)
+      if (this.currentToolName === 'select' && this.selection.size === 1) {
+        if (ev.key === 'Enter' || ev.key === 'F2') {
+          ev.preventDefault();
+          this.current.beginEdit?.();
+        } else if (ev.key.length === 1 && ev.key !== ' ' && !mod && !ev.altKey) {
+          ev.preventDefault();
+          this.current.beginEdit?.(ev.key);
+        }
       }
     }, { signal: this.listeners.signal });
   }
