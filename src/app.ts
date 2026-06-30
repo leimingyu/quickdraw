@@ -1,5 +1,5 @@
 import { Renderer } from './render/renderer';
-import { createWorkspace, getActiveTab, removeNodes, groupNodes, ungroupNodes, expandToGroups, pruneDanglingConnectors } from './model/document';
+import { createWorkspace, getActiveTab, removeNodes, groupNodes, ungroupNodes, expandToGroups, pruneDanglingConnectors, restyleNodes, reorderSelection, type StylePatch } from './model/document';
 import type { Tab, Workspace } from './model/types';
 import type { Tool, ToolName } from './tools/types';
 import { History } from './history/history';
@@ -16,6 +16,7 @@ export class App {
   workspace: Workspace;
   selection = new Set<string>();
   highlightId?: string;
+  onRender?: () => void;
   readonly renderer: Renderer;
   currentToolName: ToolName = 'select';
 
@@ -59,6 +60,7 @@ export class App {
 
   render(): void {
     this.renderer.render(this.activeTab, this.selection, this.highlightId);
+    this.onRender?.();
   }
 
   /** Commit a finished mutation. Task 12 adds history; Task 14 adds autosave. */
@@ -102,6 +104,30 @@ export class App {
   ungroup(): void {
     if (this.selection.size === 0) return;
     ungroupNodes(this.activeTab, this.selection);
+    this.commit();
+  }
+
+  /** Apply a style patch to the selection (live; no history entry). */
+  restyle(patch: StylePatch): void {
+    if (this.selection.size === 0) return;
+    restyleNodes(this.activeTab, this.selection, patch);
+    this.render();
+  }
+
+  /** Commit the last live restyle as a single history entry. */
+  commitStyle(): void {
+    this.commit();
+  }
+
+  bringToFront(): void {
+    if (this.selection.size === 0) return;
+    reorderSelection(this.activeTab, this.selection, 'front');
+    this.commit();
+  }
+
+  sendToBack(): void {
+    if (this.selection.size === 0) return;
+    reorderSelection(this.activeTab, this.selection, 'back');
     this.commit();
   }
 
