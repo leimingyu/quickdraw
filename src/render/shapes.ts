@@ -7,6 +7,7 @@ function applyStyle(el: SVGElement, s: Shape): void {
   el.setAttribute('fill', s.style.fill);
   el.setAttribute('stroke', s.style.stroke);
   el.setAttribute('stroke-width', String(s.style.strokeWidth));
+  if (s.style.dashed) el.setAttribute('stroke-dasharray', '6 4');
 }
 
 function primitive(s: Shape): SVGElement {

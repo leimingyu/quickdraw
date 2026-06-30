@@ -79,6 +79,8 @@ export function connectorToSvg(tab: Tab, c: Connector, selected: boolean): SVGGE
   line.setAttribute('stroke', selected ? '#3b82f6' : c.style.stroke);
   line.setAttribute('stroke-width', String(c.style.strokeWidth));
   if (c.style.arrowEnd) line.setAttribute('marker-end', 'url(#arrowhead)');
+  if (c.style.arrowStart) line.setAttribute('marker-start', 'url(#arrowhead)');
+  if (c.style.dashed) line.setAttribute('stroke-dasharray', '6 4');
   g.appendChild(line);
   return g;
 }
