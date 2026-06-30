@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { Autosave } from '../../src/storage/autosave';
 import { createWorkspace, getActiveTab, addNode, createShape } from '../../src/model/document';
 
@@ -24,5 +24,29 @@ describe('Autosave', () => {
     localStorage.setItem('test:corrupt', '{not json');
     const store = new Autosave('test:corrupt');
     expect(store.load()).toBeNull();
+  });
+
+  it('schedule debounces rapid calls into a single save', () => {
+    vi.useFakeTimers();
+    const store = new Autosave('test:debounce');
+    const ws = createWorkspace();
+    const spy = vi.spyOn(store, 'save');
+    store.schedule(ws);
+    store.schedule(ws);
+    store.schedule(ws);
+    vi.advanceTimersByTime(400);
+    expect(spy).toHaveBeenCalledTimes(1);
+    vi.useRealTimers();
+  });
+
+  it('cancel() prevents a pending save', () => {
+    vi.useFakeTimers();
+    const store = new Autosave('test:cancel');
+    const spy = vi.spyOn(store, 'save');
+    store.schedule(createWorkspace());
+    store.cancel();
+    vi.advanceTimersByTime(400);
+    expect(spy).not.toHaveBeenCalled();
+    vi.useRealTimers();
   });
 });

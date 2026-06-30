@@ -72,6 +72,7 @@ export class App {
     this.workspace = ws;
     this.selection.clear();
     this.render();
+    this.autosave.schedule(this.workspace);
   }
 
   redo(): void {
@@ -80,6 +81,7 @@ export class App {
     this.workspace = ws;
     this.selection.clear();
     this.render();
+    this.autosave.schedule(this.workspace);
   }
 
   deleteSelection(): void {

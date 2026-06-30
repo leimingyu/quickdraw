@@ -29,7 +29,7 @@ export class Autosave {
 
   schedule(ws: Workspace): void {
     if (this.timer) clearTimeout(this.timer);
-    this.timer = setTimeout(() => this.save(ws), DEBOUNCE_MS);
+    this.timer = setTimeout(() => { this.save(ws); this.timer = null; }, DEBOUNCE_MS);
   }
 
   cancel(): void {

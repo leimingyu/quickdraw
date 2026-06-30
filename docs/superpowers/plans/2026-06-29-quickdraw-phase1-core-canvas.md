@@ -2421,7 +2421,7 @@ export class Autosave {
 
   schedule(ws: Workspace): void {
     if (this.timer) clearTimeout(this.timer);
-    this.timer = setTimeout(() => this.save(ws), DEBOUNCE_MS);
+    this.timer = setTimeout(() => { this.save(ws); this.timer = null; }, DEBOUNCE_MS);
   }
 }
 ```
@@ -2470,7 +2470,7 @@ Schedule autosave in `commit()` and after viewport changes. Update `commit()`:
   }
 ```
 
-Add `this.autosave.schedule(this.workspace);` at the end of `zoomBy`, `panBy`, and `resetView` (after their `this.render()`).
+Add `this.autosave.schedule(this.workspace);` at the end of `commit()` (already wired), `undo()`, `redo()`, `zoomBy`, `panBy`, and `resetView` (after their `this.render()`). Adding to `undo()`/`redo()` supersedes any stale debounce closure that was created before the undo/redo ran.
 
 - [ ] **Step 6: Load saved workspace in `src/main.ts`**
 
