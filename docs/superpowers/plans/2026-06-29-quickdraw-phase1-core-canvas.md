@@ -2220,8 +2220,7 @@ Add methods to `App`:
 
   panBy(dx: number, dy: number): void {
     const vp = this.activeTab.viewport;
-    vp.panX += dx;
-    vp.panY += dy;
+    this.activeTab.viewport = { ...vp, panX: vp.panX + dx, panY: vp.panY + dy };
     this.render();
   }
 
@@ -2244,6 +2243,7 @@ In the constructor after `this.bindKeyboard();` add `this.bindViewport();` and i
 
   private bindViewport(): void {
     const svg = this.renderer.svg;
+    const sig = { signal: this.listeners.signal };
     svg.addEventListener('wheel', (ev) => {
       if (ev.ctrlKey || ev.metaKey) {
         ev.preventDefault();
@@ -2251,25 +2251,32 @@ In the constructor after `this.bindKeyboard();` add `this.bindViewport();` and i
         const factor = ev.deltaY < 0 ? 1.1 : 1 / 1.1;
         this.zoomBy(factor, ev.clientX - rect.left, ev.clientY - rect.top);
       }
-    }, { passive: false });
+    }, { ...sig, passive: false });
 
-    window.addEventListener('keydown', (ev) => { if (ev.code === 'Space') this.spaceDown = true; });
-    window.addEventListener('keyup', (ev) => { if (ev.code === 'Space') this.spaceDown = false; });
+    window.addEventListener('keydown', (ev) => { if (ev.code === 'Space') { ev.preventDefault(); this.spaceDown = true; } }, sig);
+    window.addEventListener('keyup', (ev) => { if (ev.code === 'Space') this.spaceDown = false; }, sig);
 
     svg.addEventListener('pointerdown', (ev) => {
       if (this.spaceDown || ev.button === 1) {
         this.panning = true;
         this.panLast = { x: ev.clientX, y: ev.clientY };
+        svg.setPointerCapture(ev.pointerId);
         ev.stopImmediatePropagation();
       }
-    }, true);
+    }, { ...sig, capture: true });
     svg.addEventListener('pointermove', (ev) => {
       if (!this.panning) return;
       this.panBy(ev.clientX - this.panLast.x, ev.clientY - this.panLast.y);
       this.panLast = { x: ev.clientX, y: ev.clientY };
       ev.stopImmediatePropagation();
-    }, true);
-    svg.addEventListener('pointerup', () => { this.panning = false; }, true);
+    }, { ...sig, capture: true });
+    svg.addEventListener('pointerup', (ev) => {
+      if (this.panning) {
+        this.panning = false;
+        svg.releasePointerCapture(ev.pointerId);
+        ev.stopImmediatePropagation();
+      }
+    }, { ...sig, capture: true });
   }
 ```
 
