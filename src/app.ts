@@ -17,6 +17,7 @@ export class App {
 
   private tools = new Map<ToolName, Tool>();
   private current: Tool = new NoopTool();
+  private listeners = new AbortController();
 
   constructor(mount: HTMLElement) {
     this.renderer = new Renderer(mount);
@@ -65,6 +66,11 @@ export class App {
     this.commit();
   }
 
+  /** Detach all global (window) listeners this App registered. */
+  destroy(): void {
+    this.listeners.abort();
+  }
+
   private bindKeyboard(): void {
     window.addEventListener('keydown', (ev) => {
       const target = ev.target as HTMLElement | null;
@@ -73,7 +79,7 @@ export class App {
         ev.preventDefault();
         this.deleteSelection();
       }
-    });
+    }, { signal: this.listeners.signal });
   }
 
   private bindPointerEvents(): void {

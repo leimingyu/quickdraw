@@ -1857,6 +1857,13 @@ In the constructor, after `this.bindPointerEvents();`, add:
 Add the method:
 
 ```ts
+  private listeners = new AbortController();
+
+  /** Detach all global (window) listeners this App registered. */
+  destroy(): void {
+    this.listeners.abort();
+  }
+
   private bindKeyboard(): void {
     window.addEventListener('keydown', (ev) => {
       const target = ev.target as HTMLElement | null;
@@ -1865,8 +1872,11 @@ Add the method:
         ev.preventDefault();
         this.deleteSelection();
       }
-    });
+    }, { signal: this.listeners.signal });
   }
+
+// NOTE: Tasks 12 (undo/redo) and 13 (space-pan) must register their window listeners
+// through `{ signal: this.listeners.signal }` so they are cleaned up by destroy().
 ```
 
 - [ ] **Step 4: Run the test to verify it passes**
