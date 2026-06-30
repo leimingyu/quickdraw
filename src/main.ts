@@ -3,6 +3,7 @@ import { mountToolbar } from './ui/toolbar';
 import { mountZoomControls } from './ui/zoom';
 import { ShapeTool } from './tools/shapeTool';
 import { SelectTool } from './tools/selectTool';
+import { ConnectorTool } from './tools/connectorTool';
 import { Autosave } from './storage/autosave';
 
 const root = document.getElementById('app')!;
@@ -24,6 +25,7 @@ for (const kind of ['rect', 'rounded', 'ellipse', 'diamond', 'triangle', 'text']
   app.registerTool(kind, new ShapeTool(app, kind));
 }
 
+app.registerTool('arrow', new ConnectorTool(app));
 mountToolbar(app, toolbarHost);
 mountZoomControls(app, toolbarHost.querySelector('.toolbar')!);
 app.render();

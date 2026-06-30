@@ -15,6 +15,7 @@ class NoopTool implements Tool {
 export class App {
   workspace: Workspace;
   selection = new Set<string>();
+  highlightId?: string;
   readonly renderer: Renderer;
   currentToolName: ToolName = 'select';
 
@@ -56,7 +57,7 @@ export class App {
   }
 
   render(): void {
-    this.renderer.render(this.activeTab, this.selection);
+    this.renderer.render(this.activeTab, this.selection, this.highlightId);
   }
 
   /** Commit a finished mutation. Task 12 adds history; Task 14 adds autosave. */

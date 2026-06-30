@@ -39,7 +39,7 @@ export class Renderer {
     mount.appendChild(this.svg);
   }
 
-  render(tab: Tab, selection: Set<string>): void {
+  render(tab: Tab, selection: Set<string>, highlightId?: string): void {
     const vp = tab.viewport;
     const transform = `translate(${vp.panX} ${vp.panY}) scale(${vp.zoom})`;
     this.content.setAttribute('transform', transform);
@@ -52,6 +52,22 @@ export class Renderer {
     this.content.replaceChildren(...connectors, ...shapes);
     this.overlay.replaceChildren();
     this.drawSelection(tab, selection);
+    if (highlightId) this.drawHighlight(tab, highlightId);
+  }
+
+  private drawHighlight(tab: Tab, id: string): void {
+    const node = tab.nodes.find((n) => n.id === id);
+    if (!node || !isShape(node)) return;
+    const r = document.createElementNS(NS, 'rect');
+    r.setAttribute('x', String(node.x));
+    r.setAttribute('y', String(node.y));
+    r.setAttribute('width', String(node.w));
+    r.setAttribute('height', String(node.h));
+    r.setAttribute('fill', 'none');
+    r.setAttribute('stroke', '#22c55e');
+    r.setAttribute('stroke-width', '2');
+    r.setAttribute('pointer-events', 'none');
+    this.overlay.appendChild(r);
   }
 
   private drawSelection(tab: Tab, selection: Set<string>): void {

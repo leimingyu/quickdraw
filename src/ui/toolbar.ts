@@ -9,6 +9,7 @@ const TOOLS: { name: ToolName; label: string }[] = [
   { name: 'diamond', label: 'Diamond' },
   { name: 'triangle', label: 'Triangle' },
   { name: 'text', label: 'Text' },
+  { name: 'arrow', label: 'Arrow' },
 ];
 
 export function mountToolbar(app: App, container: HTMLElement): void {
