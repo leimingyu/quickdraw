@@ -102,6 +102,47 @@ export class SelectTool implements Tool {
     };
   }
 
+  applyText(id: string, value: string): void {
+    const s = (this.app.activeTab.nodes as Shape[]).find((n) => n.id === id);
+    if (!s) return;
+    s.text = value;
+    this.app.commit();
+  }
+
+  onDoubleClick(world: Point, _ev?: MouseEvent): void {
+    const hit = hitTest(this.app.activeTab.nodes as Shape[], world);
+    if (!hit) return;
+    this.app.selection = new Set([hit.id]);
+    this.app.render();
+    this.openEditor(hit);
+  }
+
+  private openEditor(s: Shape): void {
+    const host = this.app.renderer.svg.parentElement;
+    if (!host) return;
+    const input = document.createElement('input');
+    input.className = 'text-editor';
+    input.value = s.text ?? '';
+    const vp = this.app.activeTab.viewport;
+    input.style.position = 'absolute';
+    input.style.left = `${vp.panX + s.x * vp.zoom}px`;
+    input.style.top = `${vp.panY + (s.y + s.h / 2 - 12) * vp.zoom}px`;
+    input.style.width = `${s.w * vp.zoom}px`;
+    host.style.position = 'relative';
+    host.appendChild(input);
+    input.focus();
+    input.select();
+    const commit = (write: boolean) => {
+      if (write) this.applyText(s.id, input.value);
+      input.remove();
+    };
+    input.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') commit(true);
+      else if (e.key === 'Escape') commit(false);
+    });
+    input.addEventListener('blur', () => commit(true));
+  }
+
   private singleSelected(): Shape | null {
     if (this.app.selection.size !== 1) return null;
     const id = [...this.app.selection][0];
