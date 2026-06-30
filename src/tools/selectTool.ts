@@ -29,18 +29,23 @@ export class SelectTool implements Tool {
 
   onPointerMove(world: Point, _ev: PointerEvent): void {
     if (this.mode === 'marquee') {
-      this.app.selection = new Set(
-        (this.app.activeTab.nodes as Shape[])
-          .filter((s) => shapeInRect(s, this.marqueeBox(world)))
-          .map((s) => s.id),
-      );
+      this.applyMarquee(world);
       this.app.render();
     }
   }
 
-  onPointerUp(_world: Point, _ev: PointerEvent): void {
+  onPointerUp(world: Point, _ev: PointerEvent): void {
+    if (this.mode === 'marquee') this.applyMarquee(world);
     this.mode = 'idle';
     this.app.render();
+  }
+
+  private applyMarquee(world: Point): void {
+    this.app.selection = new Set(
+      (this.app.activeTab.nodes as Shape[])
+        .filter((s) => shapeInRect(s, this.marqueeBox(world)))
+        .map((s) => s.id),
+    );
   }
 
   private toggle(id: string): void {

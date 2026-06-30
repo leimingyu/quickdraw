@@ -54,4 +54,23 @@ describe('SelectTool selection', () => {
     expect(app.selection.has(a.id)).toBe(true);
     expect(app.selection.has(b.id)).toBe(false);
   });
+
+  it('marquee finalizes on pointerup even without an intervening move', () => {
+    const a = createShape('rect', 0, 0, 50, 50);
+    addNode(app.activeTab, a);
+    tool.onPointerDown({ x: -10, y: -10 }, { shiftKey: false } as PointerEvent);
+    tool.onPointerUp({ x: 100, y: 100 }, { shiftKey: false } as PointerEvent);
+    expect(app.selection.has(a.id)).toBe(true);
+  });
+
+  it('clicking a shape already in a multi-selection keeps the whole selection', () => {
+    const a = createShape('rect', 0, 0, 50, 50);
+    const b = createShape('rect', 100, 0, 50, 50);
+    addNode(app.activeTab, a);
+    addNode(app.activeTab, b);
+    click({ x: 25, y: 25 });        // select a
+    click({ x: 125, y: 25 }, true); // shift-add b
+    click({ x: 25, y: 25 });        // click a again, no shift
+    expect(app.selection.size).toBe(2);
+  });
 });
