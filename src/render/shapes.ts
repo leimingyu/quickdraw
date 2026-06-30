@@ -1,6 +1,7 @@
 import type { Shape } from '../model/types';
 
 const NS = 'http://www.w3.org/2000/svg';
+const ROUNDED_RADIUS = 12;
 
 function applyStyle(el: SVGElement, s: Shape): void {
   el.setAttribute('fill', s.style.fill);
@@ -39,8 +40,8 @@ function primitive(s: Shape): SVGElement {
       r.setAttribute('width', String(s.w));
       r.setAttribute('height', String(s.h));
       if (s.kind === 'rounded') {
-        r.setAttribute('rx', '12');
-        r.setAttribute('ry', '12');
+        r.setAttribute('rx', String(ROUNDED_RADIUS));
+        r.setAttribute('ry', String(ROUNDED_RADIUS));
       }
       applyStyle(r, s);
       return r;
@@ -57,7 +58,7 @@ function textEl(s: Shape): SVGTextElement {
   t.setAttribute('font-size', String(s.style.fontSize));
   t.setAttribute('fill', s.style.fontColor);
   t.setAttribute('pointer-events', 'none');
-  t.textContent = s.text ?? '';
+  t.textContent = s.text!;
   return t;
 }
 

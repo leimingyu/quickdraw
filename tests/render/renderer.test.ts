@@ -42,4 +42,9 @@ describe('Renderer', () => {
     r.render(tab, new Set([s.id]));
     expect(r.svg.querySelectorAll('[data-handle]').length).toBe(8);
   });
+
+  it('toWorld inverts the viewport transform (jsdom rect offsets are 0)', () => {
+    const r = new Renderer(mount);
+    expect(r.toWorld(100, 100, { panX: 10, panY: 10, zoom: 2 })).toEqual({ x: 45, y: 45 });
+  });
 });
