@@ -52,4 +52,14 @@ export class ConnectorTool implements Tool {
     this.sourceId = null;
     this.preview = null;
   }
+
+  onDeactivate(): void {
+    if (this.preview) {
+      removeNodes(this.app.activeTab, new Set([this.preview.id]));
+      this.preview = null;
+    }
+    this.sourceId = null;
+    this.app.highlightId = undefined;
+    this.app.render();
+  }
 }

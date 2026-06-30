@@ -69,4 +69,14 @@ describe('ConnectorTool', () => {
     tool.onPointerUp(at({ x: 350, y: 50 }));
     expect(app.activeTab.nodes.filter(isConnector)).toHaveLength(0);
   });
+
+  it('switching tools mid-drag removes the preview and clears the highlight', () => {
+    twoShapes();
+    tool.onPointerDown({ x: 50, y: 50 });   // start a drag (preview added)
+    tool.onPointerMove({ x: 200, y: 50 });
+    expect(app.activeTab.nodes.filter(isConnector)).toHaveLength(1);
+    app.setTool('select');                  // switch away mid-drag → onDeactivate fires
+    expect(app.activeTab.nodes.filter(isConnector)).toHaveLength(0);
+    expect(app.highlightId).toBeUndefined();
+  });
 });
