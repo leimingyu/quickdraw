@@ -48,6 +48,12 @@ describe('App style + z-order', () => {
     expect(s.style.fill).not.toBe('#000000');
   });
 
+  it('commitStyle is a no-op on an empty selection', () => {
+    const commitSpy = vi.spyOn(app, 'commit');
+    app.commitStyle();
+    expect(commitSpy).not.toHaveBeenCalled();
+  });
+
   it('render() calls the onRender hook', () => {
     const hook = vi.fn();
     app.onRender = hook;

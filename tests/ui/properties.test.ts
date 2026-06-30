@@ -99,4 +99,15 @@ describe('properties panel', () => {
     (dock().querySelector('[data-action="front"]') as HTMLElement).dispatchEvent(new Event('click'));
     expect(app.activeTab.nodes[app.activeTab.nodes.length - 1].id).toBe(a.id);
   });
+
+  it('keeps a focused input through a same-selection update (signature gate)', () => {
+    const { a } = connected();
+    app.selection = new Set([a.id]);
+    panel.update();
+    const input = q('[data-prop="fill"]');
+    input.focus();
+    expect(document.activeElement).toBe(input);
+    panel.update(); // same selection signature → must NOT rebuild
+    expect(document.activeElement).toBe(input); // still the same focused element
+  });
 });

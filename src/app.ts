@@ -116,6 +116,7 @@ export class App {
 
   /** Commit the last live restyle as a single history entry. */
   commitStyle(): void {
+    if (this.selection.size === 0) return;
     this.commit();
   }
 
