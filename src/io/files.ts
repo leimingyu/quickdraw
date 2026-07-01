@@ -16,6 +16,23 @@ export function safeFileName(name: string): string {
   return clean || 'drawing';
 }
 
+/** Sanitize a user-entered export name and ensure it ends with `.ext`. */
+export function exportFileName(input: string, ext: string): string {
+  let name = safeFileName(input);
+  if (!name.toLowerCase().endsWith(`.${ext.toLowerCase()}`)) name += `.${ext}`;
+  return name;
+}
+
+/** Prompt (synchronously, inside the click gesture) for the export file name,
+ *  pre-filled with `<tab name>.<ext>`. Returns the sanitized name, or null if
+ *  the user cancels or clears it. */
+function promptExportName(app: App, ext: string): string | null {
+  const suggested = `${safeFileName(app.activeTab.name)}.${ext}`;
+  const input = window.prompt(`Export ${ext.toUpperCase()} — file name:`, suggested);
+  if (input === null || input.trim() === '') return null;
+  return exportFileName(input, ext);
+}
+
 function downloadBlob(blob: Blob, filename: string): void {
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
@@ -97,14 +114,17 @@ function pickFileText(): Promise<string> {
 }
 
 export function exportTabSvg(app: App): void {
+  const filename = promptExportName(app, 'svg');
+  if (!filename) return; // cancelled
   const svg = tabToSvgString(app.activeTab);
-  downloadBlob(new Blob([svg], { type: 'image/svg+xml' }), `${safeFileName(app.activeTab.name)}.svg`);
+  downloadBlob(new Blob([svg], { type: 'image/svg+xml' }), filename);
 }
 
 export function exportTabPng(app: App): void {
+  const filename = promptExportName(app, 'png'); // prompt synchronously, before the async raster
+  if (!filename) return; // cancelled
   const svg = tabToSvgString(app.activeTab);
   const url = URL.createObjectURL(new Blob([svg], { type: 'image/svg+xml' }));
-  const name = safeFileName(app.activeTab.name);
   const img = new Image();
   img.onload = () => {
     const canvas = document.createElement('canvas');
@@ -114,7 +134,7 @@ export function exportTabPng(app: App): void {
     URL.revokeObjectURL(url);
     if (!ctx) return; // canvas unavailable — nothing to export
     ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-    canvas.toBlob((blob) => { if (blob) downloadBlob(blob, `${name}.png`); }, 'image/png');
+    canvas.toBlob((blob) => { if (blob) downloadBlob(blob, filename); }, 'image/png');
   };
   img.onerror = () => URL.revokeObjectURL(url); // don't leak the blob URL if the SVG can't be decoded
   img.src = url;

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { safeFileName } from '../../src/io/files';
+import { safeFileName, exportFileName } from '../../src/io/files';
 
 describe('safeFileName', () => {
   it('replaces filesystem-invalid characters with underscores', () => {
@@ -15,5 +15,22 @@ describe('safeFileName', () => {
   });
   it('keeps a whitespace-free name unchanged', () => {
     expect(safeFileName('Diagram')).toBe('Diagram');
+  });
+});
+
+describe('exportFileName', () => {
+  it('appends the extension when the user omits it', () => {
+    expect(exportFileName('MyDiagram', 'svg')).toBe('MyDiagram.svg');
+  });
+  it('does not double the extension (case-insensitive)', () => {
+    expect(exportFileName('MyDiagram.svg', 'svg')).toBe('MyDiagram.svg');
+    expect(exportFileName('Chart.SVG', 'svg')).toBe('Chart.SVG');
+  });
+  it('sanitizes invalid characters and whitespace', () => {
+    expect(exportFileName('My Diagram', 'png')).toBe('My_Diagram.png');
+    expect(exportFileName('a/b:c', 'svg')).toBe('a_b_c.svg');
+  });
+  it('falls back to "drawing" for a blank name', () => {
+    expect(exportFileName('   ', 'svg')).toBe('drawing.svg');
   });
 });
