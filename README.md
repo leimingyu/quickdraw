@@ -31,10 +31,11 @@ npm run preview  # serve the built dist/ locally
 - **Text** — **select a shape and just start typing** to add a centered label (or double-click). Press **Enter**/**F2** to edit existing text, **Esc** to cancel.
 - **Connect** — link two shapes with an arrow: pick the **Arrow** tool, then drag from a source shape to a target shape (a live preview follows the cursor and the target highlights). Arrows attach to shape **edges** and **re-route automatically** when you move a shape; deleting a shape removes its arrows. Click an arrow to select it, **Delete** to remove. The Arrow tool stays active for several; **Esc** exits.
 - **Style** — select anything and a **properties panel** appears on the right to edit it: fill color, line color/width, solid/dashed, font size/color, connector arrowheads (start/end), and bring-to-front / send-to-back. Edits apply live; a color-pick or number tweak is a single undo. Multi-select applies to everything selected; mixed selections show the shared controls plus each type's own.
-- **Group** — select multiple shapes and group them so they move as a single unit (the **Group** button or **⌘/Ctrl+G**; **Ungroup** with **⌘/Ctrl+Shift+G**). Clicking any member selects the whole group. (Arrows join groups once connectors land in Phase 2.)
+- **Menu bar** — a compact Microsoft-Paint-style menu bar organizes everything into **File** (save / open / export / clear), **Edit** (undo/redo, cut/copy/paste/duplicate, delete, select-all, group/ungroup), **Shapes** (pick a tool — the title shows the active one), and **View** (zoom). The style/properties panel stays docked on the right.
+- **Group** — select multiple shapes and group them so they move as a single unit (**Edit → Group** or **⌘/Ctrl+G**; **Ungroup** with **⌘/Ctrl+Shift+G**). Clicking any member selects the whole group.
 - **Delete & reset** — remove the selection, or clear the whole canvas (both undoable).
 - **Undo / redo** — snapshot-based history.
-- **Pan & zoom** — zoom buttons, ⌘/Ctrl + scroll to zoom at the cursor, hold **Space** (or middle-mouse) and drag to pan, **100%** to reset the view.
+- **Pan & zoom** — the **View** menu (zoom in / out / reset), ⌘/Ctrl + scroll to zoom at the cursor, hold **Space** (or middle-mouse) and drag to pan.
 - **Autosave** — your work is saved to the browser (`localStorage`) and restored on reload.
 
 ### Keyboard & mouse
@@ -55,7 +56,7 @@ npm run preview  # serve the built dist/ locally
 | Duplicate selection | **⌘/Ctrl+D** |
 | Group / ungroup | **⌘/Ctrl+G** / **⌘/Ctrl+Shift+G** |
 | Undo / redo | **⌘/Ctrl+Z** / **⌘/Ctrl+Shift+Z** (or **Ctrl+Y**) |
-| Zoom | **⌘/Ctrl + scroll**, or the −/+/100% buttons |
+| Zoom | **⌘/Ctrl + scroll**, or the **View** menu |
 | Pan | hold **Space** (or middle-mouse) and drag |
 
 > Note: Space is the pan modifier, so a label can't *start* with a space — every other position is fine.
@@ -82,7 +83,7 @@ src/
   tools/      interaction state machines (select, shape placement)
   history/    snapshot undo/redo
   storage/    localStorage autosave
-  ui/         toolbar, zoom controls
+  ui/         menu bar, tabs, properties panel, toast
   app.ts      app state + event wiring · main.ts  bootstrap
 ```
 
