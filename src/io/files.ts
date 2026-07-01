@@ -32,28 +32,6 @@ function downloadBlob(blob: Blob, filename: string): void {
   setTimeout(() => { a.remove(); URL.revokeObjectURL(url); }, 40_000);
 }
 
-/** Write a blob to a user-chosen file via the File System Access API (a native
- *  "Save As" with `suggestedName` pre-filled — reliable in Chrome/Edge), or fall
- *  back to a plain download elsewhere. */
-async function saveBlob(blob: Blob, suggestedName: string, accept: Record<string, string[]>): Promise<void> {
-  if ('showSaveFilePicker' in window) {
-    try {
-      const handle = await (window as any).showSaveFilePicker({
-        suggestedName,
-        types: [{ description: suggestedName, accept }],
-      });
-      const writable = await handle.createWritable();
-      await writable.write(blob);
-      await writable.close();
-      return;
-    } catch (err) {
-      if ((err as Error).name === 'AbortError') return; // user cancelled the picker
-      // any other error → fall back to a plain download
-    }
-  }
-  downloadBlob(blob, suggestedName);
-}
-
 export async function saveWorkspace(app: App): Promise<void> {
   const text = serializeWorkspace(app.workspace);
   if ('showSaveFilePicker' in window) {
@@ -118,9 +96,9 @@ function pickFileText(): Promise<string> {
   });
 }
 
-export async function exportTabSvg(app: App): Promise<void> {
+export function exportTabSvg(app: App): void {
   const svg = tabToSvgString(app.activeTab);
-  await saveBlob(new Blob([svg], { type: 'image/svg+xml' }), `${safeFileName(app.activeTab.name)}.svg`, { 'image/svg+xml': ['.svg'] });
+  downloadBlob(new Blob([svg], { type: 'image/svg+xml' }), `${safeFileName(app.activeTab.name)}.svg`);
 }
 
 export function exportTabPng(app: App): void {
@@ -136,7 +114,7 @@ export function exportTabPng(app: App): void {
     URL.revokeObjectURL(url);
     if (!ctx) return; // canvas unavailable — nothing to export
     ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-    canvas.toBlob((blob) => { if (blob) void saveBlob(blob, `${name}.png`, { 'image/png': ['.png'] }); }, 'image/png');
+    canvas.toBlob((blob) => { if (blob) downloadBlob(blob, `${name}.png`); }, 'image/png');
   };
   img.onerror = () => URL.revokeObjectURL(url); // don't leak the blob URL if the SVG can't be decoded
   img.src = url;
