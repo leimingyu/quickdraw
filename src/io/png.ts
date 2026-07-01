@@ -14,7 +14,9 @@ export function crc32(bytes: Uint8Array): number {
 
 /** A PNG `pHYs` chunk declaring `dpi` dots per inch on both axes (unit = metre). */
 export function physChunk(dpi: number): Uint8Array {
-  const ppm = Math.round(dpi / 0.0254); // pixels per metre
+  // Round the integer pixels-per-metre UP so the encoded DPI is never below `dpi`
+  // (rounding to nearest can land a hair under, e.g. 300 → 11811 ppm ≈ 299.9994).
+  const ppm = Math.ceil(dpi / 0.0254); // pixels per metre, ≥ dpi
   const chunk = new Uint8Array(21); // 4 length + 4 type + 9 data + 4 CRC
   const dv = new DataView(chunk.buffer);
   dv.setUint32(0, 9); // data length

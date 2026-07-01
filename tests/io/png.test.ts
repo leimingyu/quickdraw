@@ -18,13 +18,14 @@ describe('PNG DPI tagging', () => {
     expect(crc32(new Uint8Array([0x49, 0x45, 0x4e, 0x44]))).toBe(0xae426082);
   });
 
-  it('physChunk encodes 300 DPI as 11811 px/m with a self-consistent CRC', () => {
+  it('physChunk encodes ≥300 DPI (11812 px/m, rounded up) with a self-consistent CRC', () => {
     const c = physChunk(300);
     const dv = new DataView(c.buffer);
     expect(dv.getUint32(0)).toBe(9); // data length
     expect(String.fromCharCode(c[4], c[5], c[6], c[7])).toBe('pHYs');
-    expect(dv.getUint32(8)).toBe(11811); // x px/m
-    expect(dv.getUint32(12)).toBe(11811); // y px/m
+    expect(dv.getUint32(8)).toBe(11812); // x px/m → 300.025 DPI (never below 300)
+    expect(dv.getUint32(12)).toBe(11812); // y px/m
+    expect(dv.getUint32(8) * 0.0254).toBeGreaterThanOrEqual(300); // no less than 300 DPI
     expect(c[16]).toBe(1); // unit = metre
     expect(dv.getUint32(17)).toBe(crc32(c.subarray(4, 17)));
   });
@@ -36,7 +37,7 @@ describe('PNG DPI tagging', () => {
     const dv = new DataView(out.buffer);
     expect(dv.getUint32(33)).toBe(9); // chunk begins at offset 33
     expect(String.fromCharCode(out[37], out[38], out[39], out[40])).toBe('pHYs');
-    expect(dv.getUint32(41)).toBe(11811);
+    expect(dv.getUint32(41)).toBe(11812);
     // the original IDAT bytes still follow the inserted chunk
     expect(String.fromCharCode(out[58], out[59], out[60], out[61])).toBe('IDAT');
   });
