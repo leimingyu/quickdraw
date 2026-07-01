@@ -64,4 +64,33 @@ describe('editing text in any tool', () => {
     window.dispatchEvent(new KeyboardEvent('keydown', { key: 'H', bubbles: true }));
     expect(editor()).toBeNull();
   });
+
+  it('Enter over a single selection opens the editor with its existing text', () => {
+    app.setTool('rect');
+    const s = createShape('rect', 0, 0, 100, 100);
+    s.text = 'Hi';
+    addNode(app.activeTab, s);
+    app.selection = new Set([s.id]);
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+    expect(editor()?.value).toBe('Hi');
+  });
+
+  it('Space does not open the editor (reserved for pan)', () => {
+    app.setTool('select');
+    const s = createShape('rect', 0, 0, 100, 100);
+    addNode(app.activeTab, s);
+    app.selection = new Set([s.id]);
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: ' ', code: 'Space', bubbles: true }));
+    expect(editor()).toBeNull();
+  });
+
+  it('type-to-edit is a no-op when more than one node is selected', () => {
+    app.setTool('select');
+    const a = createShape('rect', 0, 0, 100, 100);
+    const b = createShape('rect', 200, 0, 100, 100);
+    [a, b].forEach((n) => addNode(app.activeTab, n));
+    app.selection = new Set([a.id, b.id]);
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'H', bubbles: true }));
+    expect(editor()).toBeNull();
+  });
 });
