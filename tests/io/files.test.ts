@@ -9,7 +9,11 @@ describe('safeFileName', () => {
     expect(safeFileName('   ')).toBe('drawing');
     expect(safeFileName('')).toBe('drawing');
   });
-  it('keeps a normal tab name unchanged', () => {
-    expect(safeFileName('Flow chart')).toBe('Flow chart');
+  it('collapses whitespace to underscores', () => {
+    expect(safeFileName('Tab 1')).toBe('Tab_1');
+    expect(safeFileName('  Flow   chart  ')).toBe('Flow_chart');
+  });
+  it('keeps a whitespace-free name unchanged', () => {
+    expect(safeFileName('Diagram')).toBe('Diagram');
   });
 });

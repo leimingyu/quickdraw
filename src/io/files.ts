@@ -6,9 +6,13 @@ const SCALE = 2; // PNG raster scale for crispness
 const JSON_TYPES = [{ description: 'QuickDraw drawing', accept: { 'application/json': ['.json'] } }];
 let fileHandle: any = null; // File System Access handle remembered for save-in-place
 
-/** Strip characters invalid in filenames; fall back to "drawing". */
+/** Strip characters invalid in filenames and collapse whitespace to underscores;
+ *  fall back to "drawing". */
 export function safeFileName(name: string): string {
-  const clean = name.replace(/[\\/:*?"<>|\x00-\x1f]/g, '_').trim();
+  const clean = name
+    .replace(/[\\/:*?"<>|\x00-\x1f]/g, '_')
+    .trim()
+    .replace(/\s+/g, '_');
   return clean || 'drawing';
 }
 
