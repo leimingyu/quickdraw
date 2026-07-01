@@ -72,6 +72,16 @@ export class Renderer {
     r.setAttribute('stroke-width', '2');
     r.setAttribute('pointer-events', 'none');
     this.overlay.appendChild(r);
+    // Connection-point targets: drop a connector end on one to pin it there.
+    for (const p of Object.values(handlePositions({ x: node.x, y: node.y, w: node.w, h: node.h }))) {
+      const dot = document.createElementNS(NS, 'circle');
+      dot.setAttribute('cx', String(p.x));
+      dot.setAttribute('cy', String(p.y));
+      dot.setAttribute('r', '4');
+      dot.setAttribute('fill', '#22c55e');
+      dot.setAttribute('pointer-events', 'none');
+      this.overlay.appendChild(dot);
+    }
   }
 
   private drawSelection(tab: Tab, selection: Set<string>): void {

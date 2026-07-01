@@ -24,6 +24,19 @@ describe('serializeWorkspace / deserializeWorkspace', () => {
     expect(deserializeWorkspace(serializeWorkspace(ws))).toEqual(ws);
   });
 
+  it('round-trips a pinned connector anchor', () => {
+    const ws = createWorkspace();
+    const a = createShape('rect', 0, 0, 50, 50);
+    const b = createShape('rect', 200, 0, 50, 50);
+    addNode(ws.tabs[0], a);
+    addNode(ws.tabs[0], b);
+    addNode(ws.tabs[0], createConnector({ nodeId: a.id, anchor: 'ne' }, { nodeId: b.id, anchor: 'sw' }));
+    const restored = deserializeWorkspace(serializeWorkspace(ws));
+    const conn = restored.tabs[0].nodes.find((n) => n.kind === 'connector')!;
+    expect(conn.from).toEqual({ nodeId: a.id, anchor: 'ne' });
+    expect(conn.to).toEqual({ nodeId: b.id, anchor: 'sw' });
+  });
+
   it('writes a versioned quickdraw wrapper', () => {
     const obj = JSON.parse(serializeWorkspace(createWorkspace()));
     expect(obj.format).toBe('quickdraw');

@@ -41,6 +41,17 @@ describe('SelectTool connector endpoint editing', () => {
     expect(conn().from).toEqual({ nodeId: a.id });
   });
 
+  it('dropping an endpoint on a connection point pins it there', () => {
+    scene();
+    const d = createShape('rect', 200, 200, 100, 100); // (200,200)-(300,300)
+    addNode(app.activeTab, d);
+    app.selection = new Set([conn().id]);
+    tool.onPointerDown({ x: 300, y: 50 }, pe());   // grab the 'to' handle
+    tool.onPointerMove({ x: 250, y: 250 }, pe());  // over D
+    tool.onPointerUp({ x: 203, y: 203 }, pe());    // release ON D's top-left corner (200,200)
+    expect(conn().to).toEqual({ nodeId: d.id, anchor: 'nw' });
+  });
+
   it('dragging an endpoint onto empty canvas detaches it (free point)', () => {
     scene();
     app.selection = new Set([conn().id]);

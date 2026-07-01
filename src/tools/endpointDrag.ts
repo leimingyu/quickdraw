@@ -2,7 +2,7 @@ import type { App } from '../app';
 import type { Connector } from '../model/types';
 import { hitTest, type Point } from '../model/geometry';
 import { isShape, isConnector } from '../model/document';
-import { connectorSegment } from '../render/connector';
+import { connectorSegment, attachEndpoint } from '../render/connector';
 
 const GRAB = 10; // screen px within which a press grabs an endpoint handle
 
@@ -67,7 +67,9 @@ export class EndpointDrag {
     this.app.highlightId = undefined;
     if (this.moved) {
       const t = hitTest(this.app.activeTab.nodes.filter(isShape), world);
-      this.conn[this.end] = t ? { nodeId: t.id } : { x: world.x, y: world.y };
+      this.conn[this.end] = t
+        ? attachEndpoint(t, world, this.app.activeTab.viewport.zoom)
+        : { x: world.x, y: world.y };
       this.app.commit(); // commit() re-renders with the final endpoint
     } else {
       this.app.render(); // a click with no drag leaves the endpoint untouched

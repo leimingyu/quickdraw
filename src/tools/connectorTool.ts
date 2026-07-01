@@ -2,6 +2,7 @@ import type { App } from '../app';
 import type { Connector, Endpoint } from '../model/types';
 import { addNode, createConnector, removeNodes, isShape } from '../model/document';
 import { hitTest, type Point } from '../model/geometry';
+import { attachEndpoint } from '../render/connector';
 import { EndpointDrag } from './endpointDrag';
 import type { Tool } from './types';
 
@@ -24,10 +25,11 @@ export class ConnectorTool implements Tool {
     return hitTest(this.app.activeTab.nodes.filter(isShape), world);
   }
 
-  /** A shape under `world` → attached endpoint; otherwise a free point. */
+  /** A shape under `world` → attached endpoint (pinned to a connection point if the
+   *  drop lands on one); otherwise a free point. */
   private endpointAt(world: Point): Endpoint {
     const s = this.shapeAt(world);
-    return s ? { nodeId: s.id } : { x: world.x, y: world.y };
+    return s ? attachEndpoint(s, world, this.app.activeTab.viewport.zoom) : { x: world.x, y: world.y };
   }
 
   onPointerDown(world: Point): void {

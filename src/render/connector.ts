@@ -1,6 +1,9 @@
-import type { Connector, Endpoint, Shape, Tab } from '../model/types';
+import type { Connector, ConnectionPoint, Endpoint, Shape, Tab } from '../model/types';
 import { isAttached, isShape } from '../model/document';
 import { handlePositions, type Box, type Point } from '../model/geometry';
+
+/** Drop within this many screen px of a connection point to pin an endpoint to it. */
+const PIN_DISTANCE = 22;
 
 const NS = 'http://www.w3.org/2000/svg';
 
@@ -38,15 +41,37 @@ function boxOf(s: Shape): Box {
   return { x: s.x, y: s.y, w: s.w, h: s.h };
 }
 
+/** Where an attached end sits on its shape: the pinned point if `anchor` is set,
+ *  else the connection point facing the other end's center. */
+function attachedPoint(box: Box, e: Endpoint, target: Point): Point {
+  if (isAttached(e) && e.anchor) {
+    const pinned = handlePositions(box)[e.anchor];
+    if (pinned) return pinned; // a valid pinned connection point
+  }
+  return nearestConnectionPoint(box, target); // dynamic (no/invalid anchor)
+}
+
+/** Attach an endpoint to `shape` at the connection point nearest `world` when the
+ *  drop lands on one (pinned/fixed); otherwise attach to the shape body (auto-snap). */
+export function attachEndpoint(shape: Shape, world: Point, zoom: number): Endpoint {
+  let name: ConnectionPoint | null = null;
+  let bestD = Infinity;
+  for (const [handle, p] of Object.entries(handlePositions(boxOf(shape)))) {
+    const d = Math.hypot(p.x - world.x, p.y - world.y);
+    if (d < bestD) { bestD = d; name = handle as ConnectionPoint; }
+  }
+  if (name && bestD <= PIN_DISTANCE / zoom) return { nodeId: shape.id, anchor: name };
+  return { nodeId: shape.id };
+}
+
 export function connectorSegment(tab: Tab, c: Connector): Segment | null {
   const a = endpointCenter(tab, c.from);
   const b = endpointCenter(tab, c.to);
   if (!a || !b) return null;
   const sa = attachedShape(tab, c.from);
   const sb = attachedShape(tab, c.to);
-  // Each attached end snaps to the connection point facing the other end's center.
-  const p1 = sa ? nearestConnectionPoint(boxOf(sa), b) : a;
-  const p2 = sb ? nearestConnectionPoint(boxOf(sb), a) : b;
+  const p1 = sa ? attachedPoint(boxOf(sa), c.from, b) : a;
+  const p2 = sb ? attachedPoint(boxOf(sb), c.to, a) : b;
   return { x1: p1.x, y1: p1.y, x2: p2.x, y2: p2.y };
 }
 

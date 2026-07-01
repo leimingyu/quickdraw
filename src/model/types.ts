@@ -1,5 +1,7 @@
 export type ShapeKind = 'rect' | 'rounded' | 'ellipse' | 'diamond' | 'triangle' | 'text';
 export type Anchor = 'top' | 'right' | 'bottom' | 'left' | 'center';
+/** A shape's 8 connection points (corners + edge midpoints), matching the resize handles. */
+export type ConnectionPoint = 'nw' | 'n' | 'ne' | 'e' | 'se' | 's' | 'sw' | 'w';
 
 export interface ShapeStyle {
   fill: string;
@@ -31,7 +33,10 @@ export interface ConnectorStyle {
   dashed?: boolean;
 }
 
-export type Endpoint = { nodeId: string } | { x: number; y: number };
+// An attached endpoint pins to a specific connection point when `anchor` is set
+// (fixed, PowerPoint-style); without it, the endpoint auto-snaps to the nearest
+// connection point facing the other end.
+export type Endpoint = { nodeId: string; anchor?: ConnectionPoint } | { x: number; y: number };
 
 export interface Connector {
   id: string;

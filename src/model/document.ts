@@ -12,7 +12,7 @@ export const DEFAULT_CONNECTOR_STYLE: ConnectorStyle = {
 
 export const isConnector = (n: Node): n is Connector => n.kind === 'connector';
 export const isShape = (n: Node): n is Shape => n.kind !== 'connector';
-export const isAttached = (e: Endpoint): e is { nodeId: string } => 'nodeId' in e;
+export const isAttached = (e: Endpoint): e is Extract<Endpoint, { nodeId: string }> => 'nodeId' in e;
 
 export function createConnector(from: Endpoint, to: Endpoint): Connector {
   return { id: uid('c'), kind: 'connector', from, to, style: { ...DEFAULT_CONNECTOR_STYLE } };
