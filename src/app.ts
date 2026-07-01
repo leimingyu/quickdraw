@@ -246,6 +246,27 @@ export class App {
     this.commit();
   }
 
+  /** Select every node in the active tab. Not undoable (selection change only). */
+  selectAll(): void {
+    this.selection = new Set(this.activeTab.nodes.map((n) => n.id));
+    this.render();
+  }
+
+  /** Nudge the selection by (dx,dy) world units (undoable). Shapes move; connectors
+   *  follow via their attached ends, and any free ends shift too. */
+  nudgeSelection(dx: number, dy: number): void {
+    if (this.selection.size === 0) return;
+    for (const n of this.activeTab.nodes) {
+      if (!this.selection.has(n.id)) continue;
+      if (isShape(n)) { n.x += dx; n.y += dy; }
+      else {
+        if (!('nodeId' in n.from)) { n.from.x += dx; n.from.y += dy; }
+        if (!('nodeId' in n.to)) { n.to.x += dx; n.to.y += dy; }
+      }
+    }
+    this.commit();
+  }
+
   /** Copy the selection (whole groups) to the in-app clipboard. No history entry. */
   copySelection(): void {
     if (this.selection.size === 0) return;
@@ -364,9 +385,26 @@ export class App {
         if (this.selection.size) { ev.preventDefault(); this.duplicate(); }
         return;
       }
+      if (mod && ev.key.toLowerCase() === 'a') {
+        ev.preventDefault();
+        this.selectAll();
+        return;
+      }
       if (ev.key === 'Delete' || ev.key === 'Backspace') {
         ev.preventDefault();
         this.deleteSelection();
+        return;
+      }
+      // Arrow keys nudge the selection (1px, or 10px with Shift). Not printable, so
+      // they never trigger type-to-edit below.
+      if (ev.key.startsWith('Arrow') && this.selection.size > 0) {
+        ev.preventDefault();
+        const step = ev.shiftKey ? 10 : 1;
+        const d: Record<string, [number, number]> = {
+          ArrowLeft: [-step, 0], ArrowRight: [step, 0], ArrowUp: [0, -step], ArrowDown: [0, step],
+        };
+        const nudge = d[ev.key];
+        if (nudge) this.nudgeSelection(nudge[0], nudge[1]);
         return;
       }
       // Type-to-edit (any tool): one shape selected → Enter/F2 edits it, a printable key

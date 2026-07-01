@@ -43,7 +43,8 @@ npm run preview  # serve the built dist/ locally
 | --- | --- |
 | Draw a shape | pick a shape tool, drag on the canvas (or click for default size) |
 | Connect two shapes | pick the **Arrow** tool, drag from one shape to another |
-| Select | click / Shift-click / drag-marquee |
+| Select | click / Shift-click / drag-marquee / **⌘/Ctrl+A** (all) |
+| Nudge selection | arrow keys (1px) · **Shift**+arrow (10px) |
 | Move / resize | drag the shape / drag a handle |
 | Rotate | select a shape, drag the round knob above it (**Shift** = 15° steps) |
 | Edit text | select + start typing, or **Enter** / **F2**, or double-click |
