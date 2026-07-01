@@ -2,6 +2,7 @@ import { App } from './app';
 import { mountToolbar } from './ui/toolbar';
 import { mountZoomControls } from './ui/zoom';
 import { mountProperties } from './ui/properties';
+import { mountTabs } from './ui/tabs';
 import { ShapeTool } from './tools/shapeTool';
 import { SelectTool } from './tools/selectTool';
 import { ConnectorTool } from './tools/connectorTool';
@@ -9,6 +10,7 @@ import { ConnectorTool } from './tools/connectorTool';
 const root = document.getElementById('app')!;
 root.innerHTML = '';
 
+const tabStripHost = document.createElement('div');
 const toolbarHost = document.createElement('div');
 const bodyHost = document.createElement('div');
 bodyHost.className = 'app-body';
@@ -17,7 +19,7 @@ canvasHost.className = 'canvas-host';
 const propsHost = document.createElement('div');
 propsHost.className = 'props-host';
 bodyHost.append(canvasHost, propsHost);
-root.append(toolbarHost, bodyHost);
+root.append(tabStripHost, toolbarHost, bodyHost);
 
 // Start every page load with a fresh, empty canvas — the previous drawing is
 // not auto-restored from the browser. (Explicit save/open to disk is Phase 3.)
@@ -33,7 +35,8 @@ app.registerTool('arrow', new ConnectorTool(app));
 mountToolbar(app, toolbarHost);
 mountZoomControls(app, toolbarHost.querySelector('.toolbar')!);
 
+const tabs = mountTabs(app, tabStripHost);
 const panel = mountProperties(app, propsHost);
-app.onRender = () => panel.update();
+app.onRender = () => { panel.update(); tabs.update(); };
 
 app.render();
