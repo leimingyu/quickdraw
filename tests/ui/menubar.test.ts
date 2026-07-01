@@ -5,7 +5,6 @@ import { addNode, createShape } from '../../src/model/document';
 
 let app: App;
 let host: HTMLElement;
-let menubar: { syncActive: () => void };
 
 beforeEach(() => {
   document.body.innerHTML = '';
@@ -14,37 +13,25 @@ beforeEach(() => {
   app = new App(mount);
   host = document.createElement('div');
   document.body.appendChild(host);
-  menubar = mountMenuBar(app, host);
+  mountMenuBar(app, host);
 });
 afterEach(() => app.destroy());
 
 const title = (name: string) =>
-  [...host.querySelectorAll<HTMLButtonElement>('.menu-title')].find((b) => b.textContent!.startsWith(name))!;
+  [...host.querySelectorAll<HTMLButtonElement>('.menu-title')].find((b) => b.textContent === name)!;
 const item = (label: string) =>
   [...host.querySelectorAll<HTMLButtonElement>('.menu-item')].find((b) => b.textContent === label)!;
 
 describe('menu bar', () => {
-  it('renders File / Edit / Shapes / View menus', () => {
-    const titles = [...host.querySelectorAll('.menu-title')].map((b) => b.textContent!.replace(/:.*/, '').trim());
-    expect(titles).toEqual(['File', 'Edit', 'Shapes', 'View']);
+  it('renders File / Edit / View menus (tools live in the palette)', () => {
+    expect([...host.querySelectorAll('.menu-title')].map((b) => b.textContent)).toEqual(['File', 'Edit', 'View']);
   });
 
   it('opens a menu on title click and closes on an outside click', () => {
-    const file = title('File');
-    file.click();
-    expect(file.closest('.menu')!.classList.contains('open')).toBe(true);
+    title('File').click();
+    expect(title('File').closest('.menu')!.classList.contains('open')).toBe(true);
     document.body.click();
-    expect(file.closest('.menu')!.classList.contains('open')).toBe(false);
-  });
-
-  it('a Shapes item sets the active tool and reflects it in the title + checkmark', () => {
-    title('Shapes').click();
-    item('Rectangle').click();
-    expect(app.currentToolName).toBe('rect');
-    menubar.syncActive();
-    expect(title('Shapes').textContent).toContain('Rectangle');
-    title('Shapes').click(); // reopen
-    expect(host.querySelector('.menu-item[data-tool="rect"]')!.classList.contains('active')).toBe(true);
+    expect(title('File').closest('.menu')!.classList.contains('open')).toBe(false);
   });
 
   it('an Edit item runs its action (Select all)', () => {

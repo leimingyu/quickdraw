@@ -1,27 +1,14 @@
 import type { App } from '../app';
-import type { ToolName } from '../tools/types';
 import { saveWorkspace, openWorkspace, exportTabSvg, exportTabPng } from '../io/files';
 
-const TOOLS: { name: ToolName; label: string }[] = [
-  { name: 'select', label: 'Select' },
-  { name: 'rect', label: 'Rectangle' },
-  { name: 'rounded', label: 'Rounded rectangle' },
-  { name: 'ellipse', label: 'Ellipse' },
-  { name: 'diamond', label: 'Diamond' },
-  { name: 'triangle', label: 'Triangle' },
-  { name: 'text', label: 'Text box' },
-  { name: 'arrow', label: 'Arrow' },
-];
-
-type Item = { label: string; run: () => void } | { tool: ToolName; label: string } | 'separator';
+type Item = { label: string; run: () => void } | 'separator';
 interface Menu { title: string; items: Item[] }
 
 /**
- * A Microsoft-Paint-style menu bar: a few dropdown menus (File / Edit / Shapes /
- * View) replacing the old flat button row. Returns `syncActive` so the caller can
- * reflect the current tool (call it on every render).
+ * A Microsoft-Paint-style menu bar: dropdown menus (File / Edit / View) for
+ * commands. Tools live in the left-side tool palette, not here.
  */
-export function mountMenuBar(app: App, container: HTMLElement): { syncActive: () => void } {
+export function mountMenuBar(app: App, container: HTMLElement): void {
   const bar = document.createElement('div');
   bar.className = 'menubar';
 
@@ -56,7 +43,6 @@ export function mountMenuBar(app: App, container: HTMLElement): { syncActive: ()
         { label: 'Ungroup', run: () => app.ungroup() },
       ],
     },
-    { title: 'Shapes', items: TOOLS.map((t) => ({ tool: t.name, label: t.label })) },
     {
       title: 'View',
       items: [
@@ -70,8 +56,6 @@ export function mountMenuBar(app: App, container: HTMLElement): { syncActive: ()
   let openWrap: HTMLElement | null = null;
   const closeAll = () => { if (openWrap) { openWrap.classList.remove('open'); openWrap = null; } };
   const open = (wrap: HTMLElement) => { closeAll(); wrap.classList.add('open'); openWrap = wrap; };
-  const shapeButtons: { name: ToolName; btn: HTMLButtonElement }[] = [];
-  let shapesTitle: HTMLButtonElement | null = null;
 
   for (const menu of menus) {
     const wrap = document.createElement('div');
@@ -79,7 +63,6 @@ export function mountMenuBar(app: App, container: HTMLElement): { syncActive: ()
     const title = document.createElement('button');
     title.className = 'menu-title';
     title.textContent = menu.title;
-    if (menu.title === 'Shapes') shapesTitle = title;
     const items = document.createElement('div');
     items.className = 'menu-items';
 
@@ -93,13 +76,7 @@ export function mountMenuBar(app: App, container: HTMLElement): { syncActive: ()
       const b = document.createElement('button');
       b.className = 'menu-item';
       b.textContent = it.label;
-      if ('tool' in it) {
-        b.dataset.tool = it.tool;
-        shapeButtons.push({ name: it.tool, btn: b });
-        b.addEventListener('click', () => { app.setTool(it.tool); closeAll(); });
-      } else {
-        b.addEventListener('click', () => { it.run(); closeAll(); });
-      }
+      b.addEventListener('click', () => { it.run(); closeAll(); });
       items.appendChild(b);
     }
 
@@ -118,15 +95,5 @@ export function mountMenuBar(app: App, container: HTMLElement): { syncActive: ()
   document.addEventListener('click', closeAll); // click anywhere else closes the menu
   document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeAll(); });
 
-  const syncActive = () => {
-    for (const { name, btn } of shapeButtons) btn.classList.toggle('active', name === app.currentToolName);
-    if (shapesTitle) {
-      const cur = TOOLS.find((t) => t.name === app.currentToolName);
-      shapesTitle.textContent = cur ? `Shapes: ${cur.label}` : 'Shapes';
-    }
-  };
-
   container.appendChild(bar);
-  syncActive();
-  return { syncActive };
 }

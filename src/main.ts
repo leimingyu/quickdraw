@@ -1,5 +1,6 @@
 import { App } from './app';
 import { mountMenuBar } from './ui/menubar';
+import { mountToolPalette } from './ui/toolPalette';
 import { saveWorkspace } from './io/files';
 import { mountProperties } from './ui/properties';
 import { mountTabs } from './ui/tabs';
@@ -14,11 +15,13 @@ const tabStripHost = document.createElement('div');
 const toolbarHost = document.createElement('div');
 const bodyHost = document.createElement('div');
 bodyHost.className = 'app-body';
+const paletteHost = document.createElement('div');
+paletteHost.className = 'palette-host';
 const canvasHost = document.createElement('div');
 canvasHost.className = 'canvas-host';
 const propsHost = document.createElement('div');
 propsHost.className = 'props-host';
-bodyHost.append(canvasHost, propsHost);
+bodyHost.append(paletteHost, canvasHost, propsHost);
 root.append(tabStripHost, toolbarHost, bodyHost);
 
 // Start every page load with a fresh, empty canvas — the previous drawing is
@@ -32,11 +35,12 @@ for (const kind of ['rect', 'rounded', 'ellipse', 'diamond', 'triangle', 'text']
 }
 app.registerTool('arrow', new ConnectorTool(app));
 
-const menubar = mountMenuBar(app, toolbarHost);
+mountMenuBar(app, toolbarHost);
+const palette = mountToolPalette(app, paletteHost);
 
 const tabs = mountTabs(app, tabStripHost);
 const panel = mountProperties(app, propsHost);
-app.onRender = () => { panel.update(); tabs.update(); menubar.syncActive(); };
+app.onRender = () => { panel.update(); tabs.update(); palette.syncActive(); };
 app.onSave = () => saveWorkspace(app);
 
 app.render();

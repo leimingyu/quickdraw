@@ -17,6 +17,14 @@ body { font: 14px system-ui, sans-serif; }
 .menu-item:hover { background: #eff6ff; }
 .menu-item.active { background: #3b82f6; color: #fff; }
 .menu-sep { height: 1px; background: #eaeaea; margin: 4px 6px; }
+.palette-host { flex: 0 0 auto; }
+.toolpalette { display: flex; flex-direction: column; gap: 8px; padding: 10px 8px; height: 100%;
+  box-sizing: border-box; background: #f3f4f6; border-right: 1px solid #ddd; align-items: center; }
+.tool-btn { width: 40px; height: 40px; border-radius: 50%; border: 1px solid #dcdcdc; background: #fff;
+  color: #333; cursor: pointer; display: flex; align-items: center; justify-content: center; padding: 0;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.08); }
+.tool-btn:hover { background: #eef2ff; }
+.tool-btn.active { background: #1e1e1e; color: #fff; border-color: #1e1e1e; }
 .canvas-host { flex: 1; min-height: 0; }
 .app-body { display: flex; flex: 1; min-height: 0; }
 .canvas-host { flex: 1; min-width: 0; }
