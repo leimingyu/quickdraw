@@ -32,7 +32,7 @@ export function createTab(name = 'Untitled'): Tab {
 }
 
 export function createWorkspace(): Workspace {
-  const tab = createTab();
+  const tab = createTab('Tab 1');
   return { version: 1, tabs: [tab], activeTabId: tab.id };
 }
 
@@ -40,6 +40,35 @@ export function getActiveTab(ws: Workspace): Tab {
   const tab = ws.tabs.find((t) => t.id === ws.activeTabId);
   if (!tab) throw new Error(`active tab ${ws.activeTabId} not found`);
   return tab;
+}
+
+/** Append a new empty tab named "Tab N" and make it active. Returns the new tab. */
+export function addTab(ws: Workspace, name?: string): Tab {
+  const tab = createTab(name ?? `Tab ${ws.tabs.length + 1}`);
+  ws.tabs.push(tab);
+  ws.activeTabId = tab.id;
+  return tab;
+}
+
+/** Remove a tab. No-op if it's the only tab (a workspace always has ≥1 tab).
+ *  If the removed tab was active, activate its left neighbor (or the new first). */
+export function removeTab(ws: Workspace, id: string): void {
+  if (ws.tabs.length <= 1) return;
+  const i = ws.tabs.findIndex((t) => t.id === id);
+  if (i < 0) return;
+  ws.tabs.splice(i, 1);
+  if (ws.activeTabId === id) {
+    const neighbor = ws.tabs[i - 1] ?? ws.tabs[0];
+    ws.activeTabId = neighbor.id;
+  }
+}
+
+/** Rename a tab. A blank/whitespace-only name is ignored (keeps the old name). */
+export function renameTab(ws: Workspace, id: string, name: string): void {
+  const tab = ws.tabs.find((t) => t.id === id);
+  if (!tab) return;
+  const trimmed = name.trim();
+  if (trimmed) tab.name = trimmed;
 }
 
 export function findNode(tab: Tab, id: string): Node | undefined {
