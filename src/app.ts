@@ -16,6 +16,7 @@ export class App {
   selection = new Set<string>();
   highlightId?: string;
   onRender?: () => void;
+  onSave?: () => void;
   readonly renderer: Renderer;
   currentToolName: ToolName = 'select';
 
@@ -153,6 +154,16 @@ export class App {
     this.render();
   }
 
+  /** Load a document: swap the workspace, reset history to it, clear selection, render. */
+  replaceWorkspace(ws: Workspace): void {
+    this.workspace = ws;
+    this.workspace.activeTabId = this.workspace.tabs[0].id; // always open on the first tab
+    this.workspace.tabs.forEach(pruneDanglingConnectors);
+    this.history = new History(this.workspace); // the opened file is the new baseline
+    this.selection.clear();
+    this.render();
+  }
+
   /** Apply a style patch to the selection (live; no history entry). */
   restyle(patch: StylePatch): void {
     if (this.selection.size === 0) return;
@@ -281,6 +292,11 @@ export class App {
       if (mod && ev.key.toLowerCase() === 'y') {
         ev.preventDefault();
         this.redo();
+        return;
+      }
+      if (mod && ev.key.toLowerCase() === 's') {
+        ev.preventDefault();
+        this.onSave?.();
         return;
       }
       if (mod && ev.key.toLowerCase() === 'g') {
