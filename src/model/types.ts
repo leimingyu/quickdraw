@@ -31,6 +31,7 @@ export interface ConnectorStyle {
   arrowEnd: boolean;
   arrowStart?: boolean;
   dashed?: boolean;
+  routing?: 'straight' | 'elbow'; // absent/'straight' = direct line; 'elbow' = orthogonal
 }
 
 // An attached endpoint pins to a specific connection point when `anchor` is set

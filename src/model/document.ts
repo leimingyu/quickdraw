@@ -155,7 +155,7 @@ export function ungroupNodes(tab: Tab, ids: Set<string>): void {
 export type StylePatch = Partial<ShapeStyle & ConnectorStyle>;
 
 const SHAPE_ONLY = new Set(['fill', 'fontSize', 'fontColor']);
-const CONNECTOR_ONLY = new Set(['arrowStart', 'arrowEnd']);
+const CONNECTOR_ONLY = new Set(['arrowStart', 'arrowEnd', 'routing']);
 
 /** Apply a style patch to the selected nodes, routing each key by node kind. */
 export function restyleNodes(tab: Tab, ids: Set<string>, patch: StylePatch): void {

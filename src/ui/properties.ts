@@ -45,6 +45,7 @@ export function mountProperties(app: App, container: HTMLElement): { update: () 
     if (firstConn) {
       dock.appendChild(toggleRow('Arrow start', 'arrowStart', !!firstConn.style.arrowStart, (v) => ({ arrowStart: v })));
       dock.appendChild(toggleRow('Arrow end', 'arrowEnd', firstConn.style.arrowEnd !== false, (v) => ({ arrowEnd: v })));
+      dock.appendChild(toggleRow('Elbow', 'routing', firstConn.style.routing === 'elbow', (v) => ({ routing: v ? 'elbow' : 'straight' })));
     }
     dock.appendChild(zorderRow());
   }

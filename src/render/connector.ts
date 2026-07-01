@@ -75,6 +75,26 @@ export function connectorSegment(tab: Tab, c: Connector): Segment | null {
   return { x1: p1.x, y1: p1.y, x2: p2.x, y2: p2.y };
 }
 
+/** Orthogonal (right-angle) route between the segment ends: a 4-point Z that
+ *  splits along the dominant axis. */
+export function elbowRoute(seg: Segment): Point[] {
+  const { x1, y1, x2, y2 } = seg;
+  if (Math.abs(x2 - x1) >= Math.abs(y2 - y1)) {
+    const mx = (x1 + x2) / 2; // split vertically at the horizontal midpoint
+    return [{ x: x1, y: y1 }, { x: mx, y: y1 }, { x: mx, y: y2 }, { x: x2, y: y2 }];
+  }
+  const my = (y1 + y2) / 2; // split horizontally at the vertical midpoint
+  return [{ x: x1, y: y1 }, { x: x1, y: my }, { x: x2, y: my }, { x: x2, y: y2 }];
+}
+
+/** The connector's drawn points: a 2-point straight line, or the elbow route. */
+export function connectorRoute(tab: Tab, c: Connector): Point[] | null {
+  const seg = connectorSegment(tab, c);
+  if (!seg) return null;
+  if (c.style.routing === 'elbow') return elbowRoute(seg);
+  return [{ x: seg.x1, y: seg.y1 }, { x: seg.x2, y: seg.y2 }];
+}
+
 function distToSegment(p: Point, s: Segment): number {
   const vx = s.x2 - s.x1;
   const vy = s.y2 - s.y1;
@@ -88,8 +108,13 @@ function distToSegment(p: Point, s: Segment): number {
 }
 
 export function connectorHit(tab: Tab, c: Connector, point: Point, tol: number): boolean {
-  const seg = connectorSegment(tab, c);
-  return seg ? distToSegment(point, seg) <= tol : false;
+  const pts = connectorRoute(tab, c);
+  if (!pts) return false;
+  for (let i = 0; i + 1 < pts.length; i++) {
+    const s = { x1: pts[i].x, y1: pts[i].y, x2: pts[i + 1].x, y2: pts[i + 1].y };
+    if (distToSegment(point, s) <= tol) return true;
+  }
+  return false;
 }
 
 export function connectorToSvg(tab: Tab, c: Connector, selected: boolean): SVGGElement | null {
@@ -97,16 +122,26 @@ export function connectorToSvg(tab: Tab, c: Connector, selected: boolean): SVGGE
   if (!seg) return null;
   const g = document.createElementNS(NS, 'g');
   g.setAttribute('data-id', c.id);
-  const line = document.createElementNS(NS, 'line');
-  line.setAttribute('x1', String(seg.x1));
-  line.setAttribute('y1', String(seg.y1));
-  line.setAttribute('x2', String(seg.x2));
-  line.setAttribute('y2', String(seg.y2));
-  line.setAttribute('stroke', selected ? '#3b82f6' : c.style.stroke);
-  line.setAttribute('stroke-width', String(c.style.strokeWidth));
-  if (c.style.arrowEnd) line.setAttribute('marker-end', 'url(#arrowhead)');
-  if (c.style.arrowStart) line.setAttribute('marker-start', 'url(#arrowhead)');
-  if (c.style.dashed) line.setAttribute('stroke-dasharray', '6 4');
-  g.appendChild(line);
+  const stroke = selected ? '#3b82f6' : c.style.stroke;
+  let el: SVGElement;
+  if (c.style.routing === 'elbow') {
+    const poly = document.createElementNS(NS, 'polyline');
+    poly.setAttribute('points', elbowRoute(seg).map((p) => `${p.x},${p.y}`).join(' '));
+    poly.setAttribute('fill', 'none'); // a polyline fills by default — must disable
+    el = poly;
+  } else {
+    const line = document.createElementNS(NS, 'line');
+    line.setAttribute('x1', String(seg.x1));
+    line.setAttribute('y1', String(seg.y1));
+    line.setAttribute('x2', String(seg.x2));
+    line.setAttribute('y2', String(seg.y2));
+    el = line;
+  }
+  el.setAttribute('stroke', stroke);
+  el.setAttribute('stroke-width', String(c.style.strokeWidth));
+  if (c.style.arrowEnd) el.setAttribute('marker-end', 'url(#arrowhead)');
+  if (c.style.arrowStart) el.setAttribute('marker-start', 'url(#arrowhead)');
+  if (c.style.dashed) el.setAttribute('stroke-dasharray', '6 4');
+  g.appendChild(el);
   return g;
 }
