@@ -22,13 +22,36 @@ function downloadBlob(blob: Blob, filename: string): void {
   a.href = url;
   a.download = filename;
   a.rel = 'noopener';
+  a.style.display = 'none';
   document.body.appendChild(a); // some browsers only honor a detached-anchor click when it's in the DOM
   a.click();
-  a.remove();
-  // Revoke on a later tick, NOT synchronously: Chrome resolves the download's
-  // filename from the blob URL asynchronously, so revoking immediately drops the
-  // `download` name hint and the file is saved as the blob's UUID with no extension.
-  setTimeout(() => URL.revokeObjectURL(url), 10_000);
+  // Keep the anchor AND the object URL alive: Chrome resolves the download's
+  // filename asynchronously, so removing the anchor or revoking the URL
+  // synchronously drops the `download` name and the file is saved as the blob's
+  // UUID with no extension. Clean up on a long delay instead.
+  setTimeout(() => { a.remove(); URL.revokeObjectURL(url); }, 40_000);
+}
+
+/** Write a blob to a user-chosen file via the File System Access API (a native
+ *  "Save As" with `suggestedName` pre-filled — reliable in Chrome/Edge), or fall
+ *  back to a plain download elsewhere. */
+async function saveBlob(blob: Blob, suggestedName: string, accept: Record<string, string[]>): Promise<void> {
+  if ('showSaveFilePicker' in window) {
+    try {
+      const handle = await (window as any).showSaveFilePicker({
+        suggestedName,
+        types: [{ description: suggestedName, accept }],
+      });
+      const writable = await handle.createWritable();
+      await writable.write(blob);
+      await writable.close();
+      return;
+    } catch (err) {
+      if ((err as Error).name === 'AbortError') return; // user cancelled the picker
+      // any other error → fall back to a plain download
+    }
+  }
+  downloadBlob(blob, suggestedName);
 }
 
 export async function saveWorkspace(app: App): Promise<void> {
@@ -95,9 +118,9 @@ function pickFileText(): Promise<string> {
   });
 }
 
-export function exportTabSvg(app: App): void {
+export async function exportTabSvg(app: App): Promise<void> {
   const svg = tabToSvgString(app.activeTab);
-  downloadBlob(new Blob([svg], { type: 'image/svg+xml' }), `${safeFileName(app.activeTab.name)}.svg`);
+  await saveBlob(new Blob([svg], { type: 'image/svg+xml' }), `${safeFileName(app.activeTab.name)}.svg`, { 'image/svg+xml': ['.svg'] });
 }
 
 export function exportTabPng(app: App): void {
@@ -113,7 +136,7 @@ export function exportTabPng(app: App): void {
     URL.revokeObjectURL(url);
     if (!ctx) return; // canvas unavailable — nothing to export
     ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-    canvas.toBlob((blob) => { if (blob) downloadBlob(blob, `${name}.png`); }, 'image/png');
+    canvas.toBlob((blob) => { if (blob) void saveBlob(blob, `${name}.png`, { 'image/png': ['.png'] }); }, 'image/png');
   };
   img.onerror = () => URL.revokeObjectURL(url); // don't leak the blob URL if the SVG can't be decoded
   img.src = url;
