@@ -1,8 +1,8 @@
-import type { Shape, Tab, Viewport } from '../model/types';
+import type { Shape, Tab, Viewport, Connector } from '../model/types';
 import { handlePositions, selectionBounds, type Point } from '../model/geometry';
 import { isShape, isConnector } from '../model/document';
 import { shapeToSvg } from './shapes';
-import { connectorToSvg } from './connector';
+import { connectorToSvg, connectorSegment } from './connector';
 
 const NS = 'http://www.w3.org/2000/svg';
 
@@ -52,6 +52,10 @@ export class Renderer {
     this.content.replaceChildren(...connectors, ...shapes);
     this.overlay.replaceChildren();
     this.drawSelection(tab, selection);
+    if (selection.size === 1) {
+      const n = tab.nodes.find((x) => x.id === [...selection][0]);
+      if (n && isConnector(n)) this.drawConnectorHandles(tab, n);
+    }
     if (highlightId) this.drawHighlight(tab, highlightId);
   }
 
@@ -98,6 +102,26 @@ export class Renderer {
         h.setAttribute('data-handle', handle);
         this.overlay.appendChild(h);
       }
+    }
+  }
+
+  private drawConnectorHandles(tab: Tab, c: Connector): void {
+    const seg = connectorSegment(tab, c);
+    if (!seg) return;
+    const ends = [
+      ['from', seg.x1, seg.y1],
+      ['to', seg.x2, seg.y2],
+    ] as const;
+    for (const [end, x, y] of ends) {
+      const h = document.createElementNS(NS, 'circle');
+      h.setAttribute('cx', String(x));
+      h.setAttribute('cy', String(y));
+      h.setAttribute('r', '5');
+      h.setAttribute('fill', '#fff');
+      h.setAttribute('stroke', '#3b82f6');
+      h.setAttribute('stroke-width', '1.5');
+      h.setAttribute('data-endpoint', end);
+      this.overlay.appendChild(h);
     }
   }
 
