@@ -2,10 +2,11 @@ import type { App } from '../app';
 import type { Node, Shape } from '../model/types';
 import { hitTest, shapeInRect, handlePositions, resizeBox, type Box, type Handle, type Point } from '../model/geometry';
 import { groupMembers, expandToGroups, isShape, isConnector } from '../model/document';
-import { connectorHit } from '../render/connector';
+import { connectorHit, connectorSegment } from '../render/connector';
 import type { Tool } from './types';
+import type { Connector } from '../model/types';
 
-type Mode = 'idle' | 'marquee' | 'move' | 'resize';
+type Mode = 'idle' | 'marquee' | 'move' | 'resize' | 'endpoint';
 
 export class SelectTool implements Tool {
   private mode: Mode = 'idle';
@@ -15,11 +16,24 @@ export class SelectTool implements Tool {
   protected activeHandle: Handle | null = null;
   private resizeShape: Shape | null = null;
   private startBox: Box = { x: 0, y: 0, w: 0, h: 0 };
+  private endpointConn: Connector | null = null;
+  private endpointEnd: 'from' | 'to' | null = null;
 
   constructor(protected app: App) {}
 
   onPointerDown(world: Point, ev: PointerEvent): void {
     this.start = world;
+    const conn = this.singleSelectedConnector();
+    if (conn) {
+      const seg = connectorSegment(this.app.activeTab, conn);
+      if (seg) {
+        const tol = 10 / this.app.activeTab.viewport.zoom;
+        const near = (x: number, y: number) =>
+          Math.abs(world.x - x) <= tol && Math.abs(world.y - y) <= tol;
+        if (near(seg.x1, seg.y1)) { this.mode = 'endpoint'; this.endpointConn = conn; this.endpointEnd = 'from'; return; }
+        if (near(seg.x2, seg.y2)) { this.mode = 'endpoint'; this.endpointConn = conn; this.endpointEnd = 'to'; return; }
+      }
+    }
     const handle = this.handleAt(world);
     if (handle) {
       const s = this.singleSelected();
@@ -49,6 +63,13 @@ export class SelectTool implements Tool {
   }
 
   onPointerMove(world: Point, _ev: PointerEvent): void {
+    if (this.mode === 'endpoint' && this.endpointConn && this.endpointEnd) {
+      this.endpointConn[this.endpointEnd] = { x: world.x, y: world.y };
+      const t = hitTest(this.app.activeTab.nodes.filter(isShape), world);
+      this.app.highlightId = t ? t.id : undefined;
+      this.app.render();
+      return;
+    }
     if (this.mode === 'resize' && this.resizeShape && this.activeHandle) {
       const dx = world.x - this.start.x;
       const dy = world.y - this.start.y;
@@ -74,6 +95,16 @@ export class SelectTool implements Tool {
   }
 
   onPointerUp(world: Point, _ev: PointerEvent): void {
+    if (this.mode === 'endpoint' && this.endpointConn && this.endpointEnd) {
+      const t = hitTest(this.app.activeTab.nodes.filter(isShape), world);
+      this.endpointConn[this.endpointEnd] = t ? { nodeId: t.id } : { x: world.x, y: world.y };
+      this.app.highlightId = undefined;
+      this.app.commit();
+      this.mode = 'idle';
+      this.endpointConn = null;
+      this.endpointEnd = null;
+      return;
+    }
     if (this.mode === 'marquee') this.applyMarquee(world);
     else if (this.mode === 'resize') this.app.commit();
     else if (this.mode === 'move' && this.moved) this.app.commit();
@@ -134,6 +165,13 @@ export class SelectTool implements Tool {
     if (this.app.selection.size !== 1) return null;
     const id = [...this.app.selection][0];
     return this.app.activeTab.nodes.filter(isShape).find((s) => s.id === id) ?? null;
+  }
+
+  private singleSelectedConnector(): Connector | null {
+    if (this.app.selection.size !== 1) return null;
+    const id = [...this.app.selection][0];
+    const n = this.app.activeTab.nodes.find((x) => x.id === id);
+    return n && isConnector(n) ? n : null;
   }
 
   private handleAt(world: Point): Handle | null {
