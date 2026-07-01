@@ -1,5 +1,5 @@
 import { Renderer } from './render/renderer';
-import { createWorkspace, getActiveTab, removeNodes, groupNodes, ungroupNodes, expandToGroups, pruneDanglingConnectors, restyleNodes, reorderSelection, isShape, type StylePatch } from './model/document';
+import { createWorkspace, getActiveTab, removeNodes, groupNodes, ungroupNodes, expandToGroups, pruneDanglingConnectors, restyleNodes, reorderSelection, isShape, addTab as addTabModel, removeTab as removeTabModel, renameTab as renameTabModel, type StylePatch } from './model/document';
 import type { Shape, Tab, Workspace } from './model/types';
 import type { Tool, ToolName } from './tools/types';
 import { History } from './history/history';
@@ -76,8 +76,10 @@ export class App {
   undo(): void {
     const ws = this.history.undo();
     if (!ws) return;
+    const keepId = this.activeTab.id;            // stay on the current tab if it survives
     const vp = { ...this.activeTab.viewport };   // keep the live camera
     this.workspace = ws;
+    if (ws.tabs.some((t) => t.id === keepId)) ws.activeTabId = keepId;
     this.activeTab.viewport = vp;
     this.selection.clear();
     this.render();
@@ -86,8 +88,10 @@ export class App {
   redo(): void {
     const ws = this.history.redo();
     if (!ws) return;
+    const keepId = this.activeTab.id;            // stay on the current tab if it survives
     const vp = { ...this.activeTab.viewport };   // keep the live camera
     this.workspace = ws;
+    if (ws.tabs.some((t) => t.id === keepId)) ws.activeTabId = keepId;
     this.activeTab.viewport = vp;
     this.selection.clear();
     this.render();
@@ -106,6 +110,36 @@ export class App {
     if (this.selection.size === 0) return;
     ungroupNodes(this.activeTab, this.selection);
     this.commit();
+  }
+
+  /** Create a new tab, switch to it, and record it (undoable). */
+  addTab(): void {
+    addTabModel(this.workspace);
+    this.selection.clear();
+    this.commit();
+  }
+
+  /** Close a tab (undoable). No-op on the last remaining tab. */
+  closeTab(id: string): void {
+    if (this.workspace.tabs.length <= 1) return;
+    const wasActive = this.workspace.activeTabId === id;
+    removeTabModel(this.workspace, id);
+    if (wasActive) this.selection.clear();
+    this.commit();
+  }
+
+  /** Rename a tab (undoable). Blank names are ignored by the model. */
+  renameTab(id: string, name: string): void {
+    renameTabModel(this.workspace, id, name);
+    this.commit();
+  }
+
+  /** Switch the active tab. Not undoable — mutates activeTabId and re-renders only. */
+  switchTab(id: string): void {
+    if (this.workspace.activeTabId === id) return;
+    this.workspace.activeTabId = id;
+    this.selection.clear(); // selection ids belong to the previous tab's nodes
+    this.render();
   }
 
   /** Apply a style patch to the selection (live; no history entry). */
