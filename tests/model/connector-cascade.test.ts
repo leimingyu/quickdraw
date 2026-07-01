@@ -38,12 +38,12 @@ describe('connector delete-cascade and prune', () => {
     expect(tab.nodes.find((n) => n.id === c.id)).toBeUndefined();
   });
 
-  it('pruneDanglingConnectors drops a leaked floating-endpoint connector', () => {
+  it('pruneDanglingConnectors keeps a connector with a free endpoint', () => {
     const tab = createTab();
     const a = createShape('rect', 0, 0, 100, 100);
     addNode(tab, a);
-    addNode(tab, createConnector({ nodeId: a.id }, { x: 200, y: 50 })); // leaked preview
+    addNode(tab, createConnector({ nodeId: a.id }, { x: 200, y: 50 })); // free endpoint now allowed
     pruneDanglingConnectors(tab);
-    expect(tab.nodes.filter(isConnector)).toHaveLength(0);
+    expect(tab.nodes.filter(isConnector)).toHaveLength(1);
   });
 });
