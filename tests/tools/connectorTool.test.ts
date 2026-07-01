@@ -83,4 +83,17 @@ describe('ConnectorTool (draw an arrow anywhere)', () => {
     app.renderer.svg.dispatchEvent(new Event('pointercancel'));
     expect(conns()).toHaveLength(0);
   });
+
+  it('dragging an existing arrow endpoint re-routes it instead of drawing a new arrow', () => {
+    const { a, b } = twoShapes();
+    drag({ x: 50, y: 50 }, { x: 350, y: 50 }); // arrow A → B; 'to' handle resolves to B's left edge (300,50)
+    expect(conns()).toHaveLength(1);
+    tool.onPointerDown({ x: 300, y: 50 }); // grab the existing arrow's 'to' endpoint
+    tool.onPointerMove({ x: 500, y: 400 });
+    tool.onPointerUp({ x: 500, y: 400 }); // release on empty
+    expect(conns()).toHaveLength(1); // NOT a second arrow
+    expect(conns()[0].from).toEqual({ nodeId: a.id });
+    expect(conns()[0].to).toEqual({ x: 500, y: 400 }); // 'to' end detached to the drop point
+    expect(b).toBeDefined();
+  });
 });

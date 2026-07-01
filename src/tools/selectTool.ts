@@ -1,12 +1,12 @@
 import type { App } from '../app';
-import type { Node, Shape } from '../model/types';
+import type { Node, Shape, Connector } from '../model/types';
 import { hitTest, shapeInRect, handlePositions, resizeBox, type Box, type Handle, type Point } from '../model/geometry';
 import { groupMembers, expandToGroups, isShape, isConnector } from '../model/document';
-import { connectorHit, connectorSegment } from '../render/connector';
+import { connectorHit } from '../render/connector';
+import { EndpointDrag } from './endpointDrag';
 import type { Tool } from './types';
-import type { Connector } from '../model/types';
 
-type Mode = 'idle' | 'marquee' | 'move' | 'resize' | 'endpoint';
+type Mode = 'idle' | 'marquee' | 'move' | 'resize';
 
 export class SelectTool implements Tool {
   private mode: Mode = 'idle';
@@ -16,24 +16,16 @@ export class SelectTool implements Tool {
   protected activeHandle: Handle | null = null;
   private resizeShape: Shape | null = null;
   private startBox: Box = { x: 0, y: 0, w: 0, h: 0 };
-  private endpointConn: Connector | null = null;
-  private endpointEnd: 'from' | 'to' | null = null;
+  private endpoints: EndpointDrag;
 
-  constructor(protected app: App) {}
+  constructor(protected app: App) {
+    this.endpoints = new EndpointDrag(app);
+  }
 
   onPointerDown(world: Point, ev: PointerEvent): void {
     this.start = world;
-    const conn = this.singleSelectedConnector();
-    if (conn) {
-      const seg = connectorSegment(this.app.activeTab, conn);
-      if (seg) {
-        const tol = 10 / this.app.activeTab.viewport.zoom;
-        const near = (x: number, y: number) =>
-          Math.abs(world.x - x) <= tol && Math.abs(world.y - y) <= tol;
-        if (near(seg.x1, seg.y1)) { this.mode = 'endpoint'; this.endpointConn = conn; this.endpointEnd = 'from'; this.moved = false; return; }
-        if (near(seg.x2, seg.y2)) { this.mode = 'endpoint'; this.endpointConn = conn; this.endpointEnd = 'to'; this.moved = false; return; }
-      }
-    }
+    // Drag an endpoint of the selected connector before anything else.
+    if (this.endpoints.beginOn(this.singleSelectedConnector(), world)) return;
     const handle = this.handleAt(world);
     if (handle) {
       const s = this.singleSelected();
@@ -63,14 +55,7 @@ export class SelectTool implements Tool {
   }
 
   onPointerMove(world: Point, _ev: PointerEvent): void {
-    if (this.mode === 'endpoint' && this.endpointConn && this.endpointEnd) {
-      this.moved = true;
-      this.endpointConn[this.endpointEnd] = { x: world.x, y: world.y };
-      const t = hitTest(this.app.activeTab.nodes.filter(isShape), world);
-      this.app.highlightId = t ? t.id : undefined;
-      this.app.render();
-      return;
-    }
+    if (this.endpoints.active) { this.endpoints.move(world); return; }
     if (this.mode === 'resize' && this.resizeShape && this.activeHandle) {
       const dx = world.x - this.start.x;
       const dy = world.y - this.start.y;
@@ -96,23 +81,7 @@ export class SelectTool implements Tool {
   }
 
   onPointerUp(world: Point, _ev: PointerEvent): void {
-    if (this.mode === 'endpoint' && this.endpointConn && this.endpointEnd) {
-      this.app.highlightId = undefined;
-      if (this.moved) {
-        const t = hitTest(this.app.activeTab.nodes.filter(isShape), world);
-        this.endpointConn[this.endpointEnd] = t ? { nodeId: t.id } : { x: world.x, y: world.y };
-        this.app.commit(); // commit() re-renders with the final endpoint
-      } else {
-        this.app.render(); // a click with no drag leaves the endpoint untouched
-      }
-      this.mode = 'idle';
-      this.endpointConn = null;
-      this.endpointEnd = null;
-      this.moved = false;
-      this.resizeShape = null;
-      this.activeHandle = null;
-      return;
-    }
+    if (this.endpoints.active) { this.endpoints.finish(world); return; }
     if (this.mode === 'marquee') this.applyMarquee(world);
     else if (this.mode === 'resize') this.app.commit();
     else if (this.mode === 'move' && this.moved) this.app.commit();
