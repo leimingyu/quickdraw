@@ -30,7 +30,7 @@ describe('SelectTool rotation', () => {
     tool.onPointerUp({ x: 150, y: 50 }, pe());
     expect(s.rotation).toBeCloseTo(90, 4);
     app.undo();
-    expect(app.activeTab.nodes[0].rotation ?? 0).toBe(0);
+    expect((app.activeTab.nodes[0] as { rotation?: number }).rotation ?? 0).toBe(0);
   });
 
   it('Shift snaps rotation to a multiple of 15°', () => {
