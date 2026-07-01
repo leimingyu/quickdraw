@@ -77,10 +77,13 @@ export class App {
     const ws = this.history.undo();
     if (!ws) return;
     const keepId = this.activeTab.id;            // stay on the current tab if it survives
-    const vp = { ...this.activeTab.viewport };   // keep the live camera
+    const vp = { ...this.activeTab.viewport };   // its live camera
     this.workspace = ws;
-    if (ws.tabs.some((t) => t.id === keepId)) ws.activeTabId = keepId;
-    this.activeTab.viewport = vp;
+    if (ws.tabs.some((t) => t.id === keepId)) {
+      ws.activeTabId = keepId;
+      this.activeTab.viewport = vp;              // keep the live camera only for the tab we stayed on
+    }
+    // else: fell back to the snapshot's active tab — keep its own stored camera.
     this.selection.clear();
     this.render();
   }
@@ -89,10 +92,13 @@ export class App {
     const ws = this.history.redo();
     if (!ws) return;
     const keepId = this.activeTab.id;            // stay on the current tab if it survives
-    const vp = { ...this.activeTab.viewport };   // keep the live camera
+    const vp = { ...this.activeTab.viewport };   // its live camera
     this.workspace = ws;
-    if (ws.tabs.some((t) => t.id === keepId)) ws.activeTabId = keepId;
-    this.activeTab.viewport = vp;
+    if (ws.tabs.some((t) => t.id === keepId)) {
+      ws.activeTabId = keepId;
+      this.activeTab.viewport = vp;              // keep the live camera only for the tab we stayed on
+    }
+    // else: fell back to the snapshot's active tab — keep its own stored camera.
     this.selection.clear();
     this.render();
   }
@@ -128,15 +134,20 @@ export class App {
     this.commit();
   }
 
-  /** Rename a tab (undoable). Blank names are ignored by the model. */
+  /** Rename a tab. Undoable only when the name actually changes — a blank or
+   *  unchanged name is a no-op (the model ignores it) and records no history entry. */
   renameTab(id: string, name: string): void {
+    const before = this.workspace.tabs.find((t) => t.id === id)?.name;
     renameTabModel(this.workspace, id, name);
-    this.commit();
+    const after = this.workspace.tabs.find((t) => t.id === id)?.name;
+    if (after !== before) this.commit();
+    else this.render(); // no change: rebuild the strip (e.g. after an aborted rename), no history entry
   }
 
   /** Switch the active tab. Not undoable — mutates activeTabId and re-renders only. */
   switchTab(id: string): void {
     if (this.workspace.activeTabId === id) return;
+    if (!this.workspace.tabs.some((t) => t.id === id)) return; // ignore unknown ids
     this.workspace.activeTabId = id;
     this.selection.clear(); // selection ids belong to the previous tab's nodes
     this.render();

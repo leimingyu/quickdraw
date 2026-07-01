@@ -5,6 +5,13 @@ export function mountTabs(app: App, container: HTMLElement): { update: () => voi
   strip.className = 'tab-strip';
   container.appendChild(strip);
 
+  // Manual double-click detection. We can't rely on the native `dblclick`: a
+  // first click on an inactive tab switches to it, which re-renders and replaces
+  // the element the gesture began on, so the browser never fires `dblclick`
+  // there. Tracking two clicks on the same tab id works regardless of re-render.
+  let lastClickAt = 0;
+  let lastClickId = '';
+
   function update(): void {
     // Don't rebuild while a rename input is open (it would drop focus mid-edit).
     if (strip.querySelector('input.tab-rename')) return;
@@ -32,10 +39,17 @@ export function mountTabs(app: App, container: HTMLElement): { update: () => voi
     label.textContent = name;
     el.appendChild(label);
 
-    el.addEventListener('click', () => app.switchTab(id));
-    label.addEventListener('dblclick', (ev) => {
-      ev.stopPropagation();
-      beginRename(el, id, name);
+    el.addEventListener('click', () => {
+      const now = performance.now();
+      const isDouble = now - lastClickAt <= 400 && lastClickId === id;
+      lastClickAt = now;
+      lastClickId = id;
+      if (isDouble) {
+        lastClickAt = 0; // consume, so a triple-click doesn't immediately re-trigger
+        beginRename(el, id, name); // el is the current element the second click landed on
+      } else {
+        app.switchTab(id); // first click just switches (may re-render the strip)
+      }
     });
 
     if (closable) {

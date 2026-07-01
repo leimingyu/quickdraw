@@ -78,4 +78,31 @@ describe('App tab operations', () => {
     expect(app.activeTab.id).toBe(secondId); // stayed on tab 2
     expect(app.activeTab.nodes).toHaveLength(0);
   });
+
+  it('undo keeps the live camera on the tab you stay on', () => {
+    const s = createShape('rect', 0, 0, 50, 50);
+    addNode(app.activeTab, s);
+    app.commit();                                              // snapshot has default camera
+    app.activeTab.viewport = { panX: 20, panY: 20, zoom: 1.5 }; // pan after the commit (live only)
+    app.undo();                                                // undo the shape; stay on Tab 1
+    expect(app.activeTab.viewport).toEqual({ panX: 20, panY: 20, zoom: 1.5 });
+  });
+
+  it('undo of an add does not bleed the added tab camera onto the tab you land on', () => {
+    const firstId = app.activeTab.id;
+    app.addTab();                                              // Tab 2 active
+    app.activeTab.viewport = { panX: 300, panY: 300, zoom: 3 }; // pan Tab 2
+    app.undo();                                                // fall back to Tab 1
+    expect(app.activeTab.id).toBe(firstId);
+    expect(app.activeTab.viewport).toEqual({ panX: 0, panY: 0, zoom: 1 }); // Tab 1's own camera
+  });
+
+  it('a no-op rename (blank or unchanged) does not consume an undo step', () => {
+    const id = app.activeTab.id;
+    app.renameTab(id, 'Renamed'); // real change -> one history entry
+    app.renameTab(id, '   ');       // blank -> ignored, no history entry
+    app.renameTab(id, 'Renamed');   // unchanged -> no history entry
+    app.undo();                     // must undo 'Renamed', not a phantom no-op
+    expect(app.activeTab.name).toBe('Tab 1');
+  });
 });

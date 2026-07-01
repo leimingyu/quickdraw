@@ -23,6 +23,13 @@ const tabs = () => [...host.querySelectorAll('.tab')] as HTMLElement[];
 const names = () => tabs().map((t) => t.querySelector('.tab-name')!.textContent);
 const activeName = () => host.querySelector('.tab.active .tab-name')?.textContent ?? null;
 const addBtn = () => host.querySelector('.tab-add') as HTMLButtonElement;
+// A real double-click = two clicks on the same tab. The first may switch + rebuild
+// the strip (for an inactive tab), so re-query before the second click.
+const openRename = (i: number): HTMLInputElement => {
+  tabs()[i].dispatchEvent(new MouseEvent('click', { bubbles: true }));
+  tabs()[i].dispatchEvent(new MouseEvent('click', { bubbles: true }));
+  return host.querySelector('input.tab-rename') as HTMLInputElement;
+};
 
 describe('tab strip UI', () => {
   it('renders one tab per workspace tab plus an add button', () => {
@@ -67,10 +74,8 @@ describe('tab strip UI', () => {
     expect(tabs()).toHaveLength(1);
   });
 
-  it('double-clicking a tab name opens a rename input; Enter commits', () => {
-    (tabs()[0].querySelector('.tab-name') as HTMLElement)
-      .dispatchEvent(new MouseEvent('dblclick', { bubbles: true }));
-    const input = host.querySelector('input.tab-rename') as HTMLInputElement;
+  it('double-clicking a tab opens a rename input; Enter commits', () => {
+    const input = openRename(0);
     expect(input).toBeTruthy();
     input.value = 'Flow';
     input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
@@ -79,10 +84,17 @@ describe('tab strip UI', () => {
     expect(host.querySelector('input.tab-rename')).toBeNull();
   });
 
+  it('double-clicking an inactive tab switches to it and opens its rename input', () => {
+    addBtn().click();               // Tab 2 added and active; Tab 1 is now inactive
+    const input = openRename(0);     // double-click Tab 1 (inactive)
+    expect(input).toBeTruthy();
+    input.value = 'One';
+    input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+    expect(app.workspace.tabs[0].name).toBe('One');
+  });
+
   it('rename via Escape cancels (keeps the old name)', () => {
-    (tabs()[0].querySelector('.tab-name') as HTMLElement)
-      .dispatchEvent(new MouseEvent('dblclick', { bubbles: true }));
-    const input = host.querySelector('input.tab-rename') as HTMLInputElement;
+    const input = openRename(0);
     input.value = 'Nope';
     input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
     expect(app.activeTab.name).toBe('Tab 1');
@@ -90,18 +102,14 @@ describe('tab strip UI', () => {
   });
 
   it('a blank rename keeps the previous name', () => {
-    (tabs()[0].querySelector('.tab-name') as HTMLElement)
-      .dispatchEvent(new MouseEvent('dblclick', { bubbles: true }));
-    const input = host.querySelector('input.tab-rename') as HTMLInputElement;
+    const input = openRename(0);
     input.value = '   ';
     input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
     expect(app.activeTab.name).toBe('Tab 1');
   });
 
   it('blurring a blank rename keeps the previous name', () => {
-    (tabs()[0].querySelector('.tab-name') as HTMLElement)
-      .dispatchEvent(new MouseEvent('dblclick', { bubbles: true }));
-    const input = host.querySelector('input.tab-rename') as HTMLInputElement;
+    const input = openRename(0);
     input.value = '   ';
     input.dispatchEvent(new FocusEvent('blur'));
     expect(app.activeTab.name).toBe('Tab 1');
@@ -109,8 +117,7 @@ describe('tab strip UI', () => {
   });
 
   it('update() does not tear down an open rename input (no focus drop mid-edit)', () => {
-    (tabs()[0].querySelector('.tab-name') as HTMLElement)
-      .dispatchEvent(new MouseEvent('dblclick', { bubbles: true }));
+    openRename(0);
     expect(host.querySelector('input.tab-rename')).toBeTruthy();
     strip.update(); // a stray render while editing must not wipe the input
     expect(host.querySelector('input.tab-rename')).toBeTruthy();
