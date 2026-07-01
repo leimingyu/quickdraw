@@ -1,6 +1,6 @@
 import { Renderer } from './render/renderer';
 import { createWorkspace, getActiveTab, removeNodes, groupNodes, ungroupNodes, expandToGroups, pruneDanglingConnectors, restyleNodes, reorderSelection, type StylePatch } from './model/document';
-import type { Tab, Workspace } from './model/types';
+import type { Shape, Tab, Workspace } from './model/types';
 import type { Tool, ToolName } from './tools/types';
 import { History } from './history/history';
 import { zoomAt } from './model/geometry';
@@ -113,6 +113,47 @@ export class App {
   commitStyle(): void {
     if (this.selection.size === 0) return;
     this.commit();
+  }
+
+  /** Open the inline text editor over a shape (any tool). Seeds with `initial` if given,
+   *  else the shape's existing text. Enter/blur commit, Escape cancels; idempotent. */
+  editText(shape: Shape, initial?: string): void {
+    this.selection = new Set([shape.id]);
+    this.render();
+    const host = this.renderer.svg.parentElement;
+    if (!host) return;
+    const input = document.createElement('input');
+    input.className = 'text-editor';
+    input.value = initial !== undefined ? initial : shape.text ?? '';
+    const vp = this.activeTab.viewport;
+    input.style.position = 'absolute';
+    input.style.left = `${vp.panX + shape.x * vp.zoom}px`;
+    input.style.top = `${vp.panY + (shape.y + shape.h / 2 - 12) * vp.zoom}px`;
+    input.style.width = `${shape.w * vp.zoom}px`;
+    host.style.position = 'relative';
+    host.appendChild(input);
+    input.focus();
+    if (initial !== undefined) {
+      const end = input.value.length;
+      input.setSelectionRange(end, end);
+    } else {
+      input.select();
+    }
+    let done = false;
+    const commit = (write: boolean) => {
+      if (done) return;
+      done = true;
+      if (write) {
+        shape.text = input.value;
+        this.commit();
+      }
+      input.remove();
+    };
+    input.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') commit(true);
+      else if (e.key === 'Escape') commit(false);
+    });
+    input.addEventListener('blur', () => commit(true));
   }
 
   bringToFront(): void {
