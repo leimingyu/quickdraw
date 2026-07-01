@@ -99,10 +99,13 @@ export class SelectTool implements Tool {
       const t = hitTest(this.app.activeTab.nodes.filter(isShape), world);
       this.endpointConn[this.endpointEnd] = t ? { nodeId: t.id } : { x: world.x, y: world.y };
       this.app.highlightId = undefined;
-      this.app.commit();
+      this.app.commit(); // commit() re-renders with the final endpoint
       this.mode = 'idle';
       this.endpointConn = null;
       this.endpointEnd = null;
+      this.moved = false; // mirror the normal tail's gesture-state reset
+      this.resizeShape = null;
+      this.activeHandle = null;
       return;
     }
     if (this.mode === 'marquee') this.applyMarquee(world);
