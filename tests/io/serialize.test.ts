@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { serializeWorkspace, deserializeWorkspace, SAVE_VERSION } from '../../src/io/serialize';
-import { createWorkspace, addTab, addNode, createShape, createConnector } from '../../src/model/document';
+import { createWorkspace, addTab, addNode, createShape, createConnector, groupNodes } from '../../src/model/document';
 
 function sampleWorkspace() {
   const ws = createWorkspace();                        // Tab 1
@@ -9,6 +9,7 @@ function sampleWorkspace() {
   const b = createShape('ellipse', 200, 0, 80, 80);
   addNode(ws.tabs[0], a);
   addNode(ws.tabs[0], b);
+  groupNodes(ws.tabs[0], new Set([a.id, b.id]));       // exercise groupId round-trip
   addNode(ws.tabs[0], createConnector({ nodeId: a.id }, { nodeId: b.id }));
   const t2 = addTab(ws, 'Second');
   t2.viewport = { panX: 10, panY: 20, zoom: 2 };
@@ -55,6 +56,24 @@ describe('serializeWorkspace / deserializeWorkspace', () => {
 
   it('rejects an empty tabs array', () => {
     const bad = JSON.stringify({ format: 'quickdraw', version: SAVE_VERSION, workspace: { version: 1, tabs: [], activeTabId: 'x' } });
+    expect(() => deserializeWorkspace(bad)).toThrow(/corrupt|incomplete/i);
+  });
+
+  it('rejects a tab containing a null node (would throw later in prune/render)', () => {
+    const ws = createWorkspace();
+    const bad = JSON.stringify({
+      format: 'quickdraw', version: SAVE_VERSION,
+      workspace: { ...ws, tabs: [{ ...ws.tabs[0], nodes: [null] }] },
+    });
+    expect(() => deserializeWorkspace(bad)).toThrow(/corrupt|incomplete/i);
+  });
+
+  it('rejects a node missing kind/style', () => {
+    const ws = createWorkspace();
+    const bad = JSON.stringify({
+      format: 'quickdraw', version: SAVE_VERSION,
+      workspace: { ...ws, tabs: [{ ...ws.tabs[0], nodes: [{ x: 0, y: 0 }] }] },
+    });
     expect(() => deserializeWorkspace(bad)).toThrow(/corrupt|incomplete/i);
   });
 

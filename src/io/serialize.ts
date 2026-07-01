@@ -55,10 +55,29 @@ function isValidWorkspace(ws: unknown): ws is Workspace {
       typeof tab.id === 'string' &&
       typeof tab.name === 'string' &&
       Array.isArray(tab.nodes) &&
+      (tab.nodes as unknown[]).every(isValidNode) &&
       !!vp &&
       typeof vp.panX === 'number' &&
       typeof vp.panY === 'number' &&
       typeof vp.zoom === 'number'
     );
   });
+}
+
+/** A node is well-enough-formed that pruning and rendering won't throw on it.
+ *  (Shapes need numeric geometry + a style object; connectors need object endpoints + style.) */
+function isValidNode(n: unknown): boolean {
+  if (!n || typeof n !== 'object') return false;
+  const node = n as Record<string, unknown>;
+  if (typeof node.kind !== 'string') return false;
+  if (!node.style || typeof node.style !== 'object') return false;
+  if (node.kind === 'connector') {
+    return !!node.from && typeof node.from === 'object' && !!node.to && typeof node.to === 'object';
+  }
+  return (
+    typeof node.x === 'number' &&
+    typeof node.y === 'number' &&
+    typeof node.w === 'number' &&
+    typeof node.h === 'number'
+  );
 }
