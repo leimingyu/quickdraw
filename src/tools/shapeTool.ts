@@ -2,6 +2,7 @@ import type { App } from '../app';
 import type { Shape, ShapeKind } from '../model/types';
 import { addNode, createShape, isShape } from '../model/document';
 import { hitTest, type Box, type Point } from '../model/geometry';
+import { DragMove } from './dragMove';
 import type { Tool } from './types';
 
 const DEFAULT_W = 120;
@@ -25,18 +26,26 @@ function normalize(a: Point, b: Point): Box {
  * shape at that size. A click with no meaningful drag drops a default-sized
  * shape centered on the click. The tool stays active after creating so you can
  * keep drawing (press Esc, or pick Select, to switch back).
+ *
+ * Pressing on an EXISTING shape moves it (and its group) instead of drawing, so
+ * you don't have to switch to the Select tool just to nudge something; a new
+ * shape is only drawn from an empty-canvas press.
  */
 export class ShapeTool implements Tool {
   private start: Point | null = null;
   private shape: Shape | null = null;
+  private drag: DragMove;
 
-  constructor(private app: App, private kind: ShapeKind) {}
+  constructor(private app: App, private kind: ShapeKind) {
+    this.drag = new DragMove(app);
+  }
 
   onPointerDown(world: Point): void {
-    // Only create from empty canvas. Pressing on an existing shape no-ops so a
-    // double-click there edits the shape (App's global dblclick) instead of
-    // stacking a junk shape. Trade-off: can't begin a new shape atop another.
-    if (hitTest(this.app.activeTab.nodes.filter(isShape), world)) return;
+    const hit = hitTest(this.app.activeTab.nodes.filter(isShape), world);
+    if (hit) {
+      this.drag.begin(hit, world); // move the existing shape instead of drawing
+      return;
+    }
     this.start = world;
     const shape = createShape(this.kind, world.x, world.y, 0, 0);
     addNode(this.app.activeTab, shape);
@@ -46,12 +55,20 @@ export class ShapeTool implements Tool {
   }
 
   onPointerMove(world: Point): void {
+    if (this.drag.active) {
+      this.drag.move(world);
+      return;
+    }
     if (!this.start || !this.shape) return;
     Object.assign(this.shape, normalize(this.start, world));
     this.app.render();
   }
 
   onPointerUp(world: Point): void {
+    if (this.drag.active) {
+      this.drag.end();
+      return;
+    }
     if (this.start && this.shape) {
       const dx = Math.abs(world.x - this.start.x);
       const dy = Math.abs(world.y - this.start.y);

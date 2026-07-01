@@ -115,4 +115,58 @@ describe('ShapeTool', () => {
     tool.onPointerUp({ x: 50, y: 50 });
     expect(app.activeTab.nodes).toHaveLength(1); // no second shape created
   });
+
+  it('press-drags an existing shape to move it instead of drawing', () => {
+    const tool = makeTool('rect');
+    drag(tool, { x: 0, y: 0 }, { x: 100, y: 100 }); // shape A at (0,0)-(100,100)
+    const a = app.activeTab.nodes[0] as Shape;
+    tool.onPointerDown({ x: 50, y: 50 }); // press inside A
+    tool.onPointerMove({ x: 80, y: 70 });
+    tool.onPointerMove({ x: 100, y: 80 }); // total delta (50, 30)
+    tool.onPointerUp({ x: 100, y: 80 });
+    expect(app.activeTab.nodes).toHaveLength(1); // still no new shape
+    expect({ x: a.x, y: a.y }).toEqual({ x: 50, y: 30 }); // moved by the drag delta
+  });
+
+  it('a move is one undo entry that restores the original position', () => {
+    const tool = makeTool('rect');
+    drag(tool, { x: 0, y: 0 }, { x: 100, y: 100 });
+    tool.onPointerDown({ x: 50, y: 50 });
+    tool.onPointerMove({ x: 90, y: 90 }); // delta (40, 40)
+    tool.onPointerUp({ x: 90, y: 90 });
+    expect(app.activeTab.nodes[0]).toMatchObject({ x: 40, y: 40 });
+    app.undo();
+    expect(app.activeTab.nodes[0]).toMatchObject({ x: 0, y: 0 }); // back to original
+    expect(app.activeTab.nodes).toHaveLength(1);
+  });
+
+  it('pressing a shape without moving records no undo entry', () => {
+    const tool = makeTool('rect');
+    drag(tool, { x: 0, y: 0 }, { x: 100, y: 100 }); // the only undo entry (the draw)
+    tool.onPointerDown({ x: 50, y: 50 }); // press, no move
+    tool.onPointerUp({ x: 50, y: 50 });
+    app.undo(); // undoes the draw, not a phantom move
+    expect(app.activeTab.nodes).toHaveLength(0);
+  });
+
+  it('still draws a new shape from an empty-canvas press', () => {
+    const tool = makeTool('rect');
+    drag(tool, { x: 0, y: 0 }, { x: 100, y: 100 });     // shape A
+    drag(tool, { x: 200, y: 200 }, { x: 300, y: 300 }); // empty spot → shape B
+    expect(app.activeTab.nodes).toHaveLength(2);
+  });
+
+  it('moves the whole group when dragging a grouped shape', () => {
+    const tool = makeTool('rect');
+    drag(tool, { x: 0, y: 0 }, { x: 100, y: 100 });   // A
+    drag(tool, { x: 200, y: 0 }, { x: 300, y: 100 }); // B
+    const [a, b] = app.activeTab.nodes as Shape[];
+    app.selection = new Set([a.id, b.id]);
+    app.group();
+    tool.onPointerDown({ x: 50, y: 50 }); // press inside A
+    tool.onPointerMove({ x: 60, y: 70 }); // delta (10, 20)
+    tool.onPointerUp({ x: 60, y: 70 });
+    expect({ x: a.x, y: a.y }).toEqual({ x: 10, y: 20 });
+    expect({ x: b.x, y: b.y }).toEqual({ x: 210, y: 20 }); // group-mate moved too
+  });
 });
