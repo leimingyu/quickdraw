@@ -26,7 +26,10 @@ export function deserializeWorkspace(text: string): Workspace {
   if (!file || file.format !== 'quickdraw') {
     throw new Error("This isn't a QuickDraw file.");
   }
-  if (typeof file.version !== 'number' || file.version > SAVE_VERSION) {
+  if (typeof file.version !== 'number') {
+    throw new Error('This QuickDraw file is corrupt or incomplete.');
+  }
+  if (file.version > SAVE_VERSION) {
     throw new Error('This file was made with a newer version of QuickDraw.');
   }
   const ws = file.workspace;
@@ -42,8 +45,8 @@ export function deserializeWorkspace(text: string): Workspace {
 function isValidWorkspace(ws: unknown): ws is Workspace {
   if (!ws || typeof ws !== 'object') return false;
   const w = ws as Record<string, unknown>;
-  if (typeof w.activeTabId !== 'string') return false;
   if (!Array.isArray(w.tabs) || w.tabs.length === 0) return false;
+  if (typeof w.activeTabId !== 'string') return false;
   return w.tabs.every((t) => {
     if (!t || typeof t !== 'object') return false;
     const tab = t as Record<string, unknown>;

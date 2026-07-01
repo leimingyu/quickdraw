@@ -43,6 +43,11 @@ describe('serializeWorkspace / deserializeWorkspace', () => {
     expect(() => deserializeWorkspace(future)).toThrow(/newer version/i);
   });
 
+  it('reports a malformed/missing version as corrupt, not "newer version"', () => {
+    const bad = JSON.stringify({ format: 'quickdraw', version: 'oops', workspace: createWorkspace() });
+    expect(() => deserializeWorkspace(bad)).toThrow(/corrupt|incomplete/i);
+  });
+
   it('rejects a corrupt workspace (missing tabs)', () => {
     const bad = JSON.stringify({ format: 'quickdraw', version: SAVE_VERSION, workspace: { version: 1, activeTabId: 'x' } });
     expect(() => deserializeWorkspace(bad)).toThrow(/corrupt|incomplete/i);
