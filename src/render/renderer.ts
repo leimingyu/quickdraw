@@ -1,5 +1,6 @@
 import type { Shape, Tab, Viewport, Connector } from '../model/types';
 import { handlePositions, selectionBounds, type Point } from '../model/geometry';
+import type { SnapGuide } from '../model/snapping';
 import { isShape, isConnector } from '../model/document';
 import { shapeToSvg } from './shapes';
 import { connectorToSvg, connectorSegment } from './connector';
@@ -39,7 +40,7 @@ export class Renderer {
     mount.appendChild(this.svg);
   }
 
-  render(tab: Tab, selection: Set<string>, highlightId?: string): void {
+  render(tab: Tab, selection: Set<string>, highlightId?: string, guides: SnapGuide[] = []): void {
     const vp = tab.viewport;
     const transform = `translate(${vp.panX} ${vp.panY}) scale(${vp.zoom})`;
     this.content.setAttribute('transform', transform);
@@ -57,6 +58,23 @@ export class Renderer {
       if (n && isConnector(n)) this.drawConnectorHandles(tab, n);
     }
     if (highlightId) this.drawHighlight(tab, highlightId);
+    for (const g of guides) this.drawGuide(g, vp.zoom);
+  }
+
+  /** Alignment guide shown while a drag is snapped (rose, thin, non-interactive). */
+  private drawGuide(g: SnapGuide, zoom: number): void {
+    const line = document.createElementNS(NS, 'line');
+    const [x1, y1, x2, y2] = g.axis === 'x'
+      ? [g.at, g.start, g.at, g.end]
+      : [g.start, g.at, g.end, g.at];
+    line.setAttribute('x1', String(x1));
+    line.setAttribute('y1', String(y1));
+    line.setAttribute('x2', String(x2));
+    line.setAttribute('y2', String(y2));
+    line.setAttribute('stroke', '#f43f5e');
+    line.setAttribute('stroke-width', String(1 / zoom)); // ~1 screen px regardless of zoom
+    line.setAttribute('pointer-events', 'none');
+    this.overlay.appendChild(line);
   }
 
   private drawHighlight(tab: Tab, id: string): void {

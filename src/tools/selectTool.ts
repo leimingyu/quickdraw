@@ -2,16 +2,19 @@ import type { App } from '../app';
 import type { Node, Shape, Connector } from '../model/types';
 import { hitTest, shapeInRect, handlePositions, resizeBox, type Box, type Handle, type Point } from '../model/geometry';
 import { groupMembers, expandToGroups, isShape, isConnector } from '../model/document';
+import { computeSnap } from '../model/snapping';
 import { connectorHit } from '../render/connector';
 import { EndpointDrag } from './endpointDrag';
 import type { Tool } from './types';
 
 type Mode = 'idle' | 'marquee' | 'move' | 'resize';
 
+const SNAP_PX = 6; // screen-px tolerance for edge/center alignment snapping while moving
+
 export class SelectTool implements Tool {
   private mode: Mode = 'idle';
   private start: Point = { x: 0, y: 0 };
-  private last: Point = { x: 0, y: 0 };
+  private startPos = new Map<string, { x: number; y: number }>(); // selected shapes' positions at drag start
   private moved = false;
   protected activeHandle: Handle | null = null;
   private resizeShape: Shape | null = null;
@@ -44,7 +47,12 @@ export class SelectTool implements Tool {
         this.app.selection = new Set(groupMembers(this.app.activeTab, hit));
       }
       this.mode = 'move';
-      this.last = world;
+      this.startPos = new Map(
+        this.app.activeTab.nodes
+          .filter(isShape)
+          .filter((s) => this.app.selection.has(s.id))
+          .map((s) => [s.id, { x: s.x, y: s.y }]),
+      );
       this.moved = false;
       this.app.render();
     } else {
@@ -65,12 +73,29 @@ export class SelectTool implements Tool {
       return;
     }
     if (this.mode === 'move') {
-      const dx = world.x - this.last.x;
-      const dy = world.y - this.last.y;
-      this.last = world;
-      for (const s of this.app.activeTab.nodes.filter(isShape)) {
-        if (this.app.selection.has(s.id)) { s.x += dx; s.y += dy; this.moved = true; }
+      const totalDx = world.x - this.start.x;
+      const totalDy = world.y - this.start.y;
+      if (totalDx !== 0 || totalDy !== 0) this.moved = true;
+      const selected = this.app.activeTab.nodes.filter(isShape).filter((s) => this.app.selection.has(s.id));
+      // Raw bounding box of the selection at the dragged position, then snap it.
+      let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+      for (const s of selected) {
+        const p = this.startPos.get(s.id)!;
+        minX = Math.min(minX, p.x + totalDx); minY = Math.min(minY, p.y + totalDy);
+        maxX = Math.max(maxX, p.x + totalDx + s.w); maxY = Math.max(maxY, p.y + totalDy + s.h);
       }
+      const statics = this.app.activeTab.nodes
+        .filter(isShape)
+        .filter((s) => !this.app.selection.has(s.id))
+        .map((s) => ({ x: s.x, y: s.y, w: s.w, h: s.h }));
+      const tol = SNAP_PX / this.app.activeTab.viewport.zoom;
+      const snap = computeSnap({ x: minX, y: minY, w: maxX - minX, h: maxY - minY }, statics, tol);
+      for (const s of selected) {
+        const p = this.startPos.get(s.id)!;
+        s.x = p.x + totalDx + snap.dx;
+        s.y = p.y + totalDy + snap.dy;
+      }
+      this.app.snapGuides = snap.guides;
       this.app.render();
       return;
     }
@@ -82,6 +107,7 @@ export class SelectTool implements Tool {
 
   onPointerUp(world: Point, _ev: PointerEvent): void {
     if (this.endpoints.active) { this.endpoints.finish(world); return; }
+    this.app.snapGuides = []; // stop drawing alignment guides on release
     if (this.mode === 'marquee') this.applyMarquee(world);
     else if (this.mode === 'resize') this.app.commit();
     else if (this.mode === 'move' && this.moved) this.app.commit();
