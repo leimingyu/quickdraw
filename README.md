@@ -92,9 +92,8 @@ The design spec and implementation plan live under [`docs/superpowers/`](docs/su
 
 ## Roadmap
 
-- **Shipped** — smart anchored connectors (arrows that follow shapes), grouping, and the style/properties panel.
-- **Next** — multiple named tabs (the last Phase 2 piece), then connector polish (drag an endpoint to re-attach, elbow routing, per-kind edge clipping).
-- **Later** — export to JSON / PNG / SVG, open saved projects, copy/paste, alignment guides.
+- **Shipped** — smart anchored connectors with editable + fixed (pinned) connection points and elbow routing; grouping; the style/properties panel; named tabs; save/open (`.json`) and SVG/PNG export; copy/cut/paste/duplicate; alignment guides + snapping; shape rotation; keyboard nudge & select-all.
+- **Possible next** — per-kind edge clipping for connectors, drag-to-reorder tabs, obstacle-avoiding routing, and cross-tab drag.
 
 ## Tech stack
 
