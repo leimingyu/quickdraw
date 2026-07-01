@@ -56,4 +56,32 @@ describe('App.editText', () => {
     expect(s.text).toBe('orig');
     expect(editor()).toBeNull();
   });
+
+  it('places the cursor at the end when seeded with an initial character', () => {
+    const s = createShape('rect', 0, 0, 100, 100);
+    addNode(app.activeTab, s);
+    app.editText(s, 'H');
+    const input = editor()!;
+    expect(input.selectionStart).toBe(1);
+    expect(input.selectionEnd).toBe(1);
+  });
+
+  it('selects all existing text when opened without an initial', () => {
+    const s = createShape('rect', 0, 0, 100, 100);
+    s.text = 'Hello';
+    addNode(app.activeTab, s);
+    app.editText(s);
+    const input = editor()!;
+    expect(input.selectionStart).toBe(0);
+    expect(input.selectionEnd).toBe(5);
+  });
+
+  it('centers the editor vertically in screen space (offset not scaled by zoom)', () => {
+    const s = createShape('rect', 0, 0, 100, 100);
+    addNode(app.activeTab, s);
+    app.activeTab.viewport = { panX: 0, panY: 0, zoom: 2 };
+    app.editText(s);
+    // center of shape y = 50; screen = 50*2 = 100; minus 12px half-height = 88
+    expect(editor()!.style.top).toBe('88px');
+  });
 });

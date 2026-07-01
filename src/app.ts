@@ -122,13 +122,14 @@ export class App {
     this.render();
     const host = this.renderer.svg.parentElement;
     if (!host) return;
+    host.querySelector('input.text-editor')?.remove();
     const input = document.createElement('input');
     input.className = 'text-editor';
     input.value = initial !== undefined ? initial : shape.text ?? '';
     const vp = this.activeTab.viewport;
     input.style.position = 'absolute';
     input.style.left = `${vp.panX + shape.x * vp.zoom}px`;
-    input.style.top = `${vp.panY + (shape.y + shape.h / 2 - 12) * vp.zoom}px`;
+    input.style.top = `${vp.panY + (shape.y + shape.h / 2) * vp.zoom - 12}px`;
     input.style.width = `${shape.w * vp.zoom}px`;
     host.style.position = 'relative';
     host.appendChild(input);
