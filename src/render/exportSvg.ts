@@ -13,7 +13,7 @@ export function tabToSvgString(tab: Tab, padding = EXPORT_PADDING): string {
   const w = raw.w + padding * 2;
   const h = raw.h + padding * 2;
 
-  const holder = document.createElement('div');
+  const holder = document.createElement('div'); // detached mount — keeps export side-effect-free
   const renderer = new Renderer(holder);
   // Identity viewport → content <g> children are in world coords. Shallow copy so
   // the real tab's viewport is untouched; nodes are shared by reference (read-only).
@@ -21,7 +21,9 @@ export function tabToSvgString(tab: Tab, padding = EXPORT_PADDING): string {
 
   const svg = renderer.svg;
   const defs = svg.querySelector('defs')?.outerHTML ?? '';
-  const content = svg.querySelector('g')?.innerHTML ?? ''; // first <g> = content layer
+  // First <g> is the content layer (Renderer order: <defs>, content <g>, overlay <g>);
+  // the empty selection means the overlay <g> is empty and is ignored here.
+  const content = svg.querySelector('g')?.innerHTML ?? '';
 
   return `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}" viewBox="${x} ${y} ${w} ${h}">${defs}<g>${content}</g></svg>`;
 }

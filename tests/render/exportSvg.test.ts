@@ -13,6 +13,7 @@ describe('tabToSvgString', () => {
     expect(svg).toContain('xmlns="http://www.w3.org/2000/svg"');
     expect(svg).toContain(`viewBox="${100 - P} ${100 - P} ${200 + 2 * P} ${100 + 2 * P}"`);
     expect(svg).toContain(`width="${200 + 2 * P}"`);
+    expect(svg).toContain(`height="${100 + 2 * P}"`);
     expect(svg).toContain('<rect');
   });
 
