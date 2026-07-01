@@ -23,7 +23,8 @@ function normalize(a: Point, b: Point): Box {
  * Places shapes by drag-to-draw (MS Paint style): press to start, drag to
  * rubber-band a live preview from the start corner, release to create the
  * shape at that size. A click with no meaningful drag drops a default-sized
- * shape centered on the click. After creating, reverts to the select tool.
+ * shape centered on the click. The tool stays active after creating so you can
+ * keep drawing (press Esc, or pick Select, to switch back).
  */
 export class ShapeTool implements Tool {
   private start: Point | null = null;
@@ -32,7 +33,10 @@ export class ShapeTool implements Tool {
   constructor(private app: App, private kind: ShapeKind) {}
 
   onPointerDown(world: Point): void {
-    if (hitTest(this.app.activeTab.nodes.filter(isShape), world)) return; // don't create on an existing shape
+    // Only create from empty canvas. Pressing on an existing shape no-ops so a
+    // double-click there edits the shape (App's global dblclick) instead of
+    // stacking a junk shape. Trade-off: can't begin a new shape atop another.
+    if (hitTest(this.app.activeTab.nodes.filter(isShape), world)) return;
     this.start = world;
     const shape = createShape(this.kind, world.x, world.y, 0, 0);
     addNode(this.app.activeTab, shape);

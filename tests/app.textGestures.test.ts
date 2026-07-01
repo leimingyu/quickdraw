@@ -75,6 +75,16 @@ describe('editing text in any tool', () => {
     expect(editor()?.value).toBe('Hi');
   });
 
+  it('F2 over a single selection opens the editor with its existing text', () => {
+    app.setTool('rect');
+    const s = createShape('rect', 0, 0, 100, 100);
+    s.text = 'Label';
+    addNode(app.activeTab, s);
+    app.selection = new Set([s.id]);
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'F2', bubbles: true }));
+    expect(editor()?.value).toBe('Label');
+  });
+
   it('Space does not open the editor (reserved for pan)', () => {
     app.setTool('select');
     const s = createShape('rect', 0, 0, 100, 100);

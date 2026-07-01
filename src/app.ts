@@ -118,11 +118,11 @@ export class App {
   /** Open the inline text editor over a shape (any tool). Seeds with `initial` if given,
    *  else the shape's existing text. Enter/blur commit, Escape cancels; idempotent. */
   editText(shape: Shape, initial?: string): void {
+    const host = this.renderer.svg.parentElement;
+    if (!host) return; // no-op cleanly if unmounted, before touching any state
+    host.querySelector('input.text-editor')?.remove(); // flush any open editor first
     this.selection = new Set([shape.id]);
     this.render();
-    const host = this.renderer.svg.parentElement;
-    if (!host) return;
-    host.querySelector('input.text-editor')?.remove();
     const input = document.createElement('input');
     input.className = 'text-editor';
     input.value = initial !== undefined ? initial : shape.text ?? '';
