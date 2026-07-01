@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { App } from '../../src/app';
 import { SelectTool } from '../../src/tools/selectTool';
 import { addNode, createShape, createConnector, isConnector } from '../../src/model/document';
@@ -84,5 +84,16 @@ describe('SelectTool connector endpoint editing', () => {
     expect(conn().to).toEqual({ nodeId: d.id });
     app.undo();
     expect(conn().to).toEqual({ nodeId: b.id });
+  });
+
+  it('a press-and-release near an endpoint without dragging leaves it attached and records no history', () => {
+    const { a } = scene();
+    app.selection = new Set([conn().id]);
+    const spy = vi.spyOn(app, 'commit');
+    // (105,50) is within the from-handle halo (10px of (100,50)) but off shape A (x>100).
+    tool.onPointerDown({ x: 105, y: 50 }, pe());
+    tool.onPointerUp({ x: 105, y: 50 }, pe()); // no drag
+    expect(conn().from).toEqual({ nodeId: a.id }); // still attached — not detached to {105,50}
+    expect(spy).not.toHaveBeenCalled();
   });
 });

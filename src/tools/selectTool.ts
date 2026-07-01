@@ -30,8 +30,8 @@ export class SelectTool implements Tool {
         const tol = 10 / this.app.activeTab.viewport.zoom;
         const near = (x: number, y: number) =>
           Math.abs(world.x - x) <= tol && Math.abs(world.y - y) <= tol;
-        if (near(seg.x1, seg.y1)) { this.mode = 'endpoint'; this.endpointConn = conn; this.endpointEnd = 'from'; return; }
-        if (near(seg.x2, seg.y2)) { this.mode = 'endpoint'; this.endpointConn = conn; this.endpointEnd = 'to'; return; }
+        if (near(seg.x1, seg.y1)) { this.mode = 'endpoint'; this.endpointConn = conn; this.endpointEnd = 'from'; this.moved = false; return; }
+        if (near(seg.x2, seg.y2)) { this.mode = 'endpoint'; this.endpointConn = conn; this.endpointEnd = 'to'; this.moved = false; return; }
       }
     }
     const handle = this.handleAt(world);
@@ -64,6 +64,7 @@ export class SelectTool implements Tool {
 
   onPointerMove(world: Point, _ev: PointerEvent): void {
     if (this.mode === 'endpoint' && this.endpointConn && this.endpointEnd) {
+      this.moved = true;
       this.endpointConn[this.endpointEnd] = { x: world.x, y: world.y };
       const t = hitTest(this.app.activeTab.nodes.filter(isShape), world);
       this.app.highlightId = t ? t.id : undefined;
@@ -96,14 +97,18 @@ export class SelectTool implements Tool {
 
   onPointerUp(world: Point, _ev: PointerEvent): void {
     if (this.mode === 'endpoint' && this.endpointConn && this.endpointEnd) {
-      const t = hitTest(this.app.activeTab.nodes.filter(isShape), world);
-      this.endpointConn[this.endpointEnd] = t ? { nodeId: t.id } : { x: world.x, y: world.y };
       this.app.highlightId = undefined;
-      this.app.commit(); // commit() re-renders with the final endpoint
+      if (this.moved) {
+        const t = hitTest(this.app.activeTab.nodes.filter(isShape), world);
+        this.endpointConn[this.endpointEnd] = t ? { nodeId: t.id } : { x: world.x, y: world.y };
+        this.app.commit(); // commit() re-renders with the final endpoint
+      } else {
+        this.app.render(); // a click with no drag leaves the endpoint untouched
+      }
       this.mode = 'idle';
       this.endpointConn = null;
       this.endpointEnd = null;
-      this.moved = false; // mirror the normal tail's gesture-state reset
+      this.moved = false;
       this.resizeShape = null;
       this.activeHandle = null;
       return;

@@ -46,7 +46,8 @@ export class ConnectorTool implements Tool {
     if (!this.preview || !this.start) return;
     const dx = Math.abs(world.x - this.start.x);
     const dy = Math.abs(world.y - this.start.y);
-    if (dx < DRAG_THRESHOLD && dy < DRAG_THRESHOLD) {
+    const threshold = DRAG_THRESHOLD / this.app.activeTab.viewport.zoom; // screen-constant, like other tolerances
+    if (dx < threshold && dy < threshold) {
       removeNodes(this.app.activeTab, new Set([this.preview.id])); // a click → no arrow
       this.app.highlightId = undefined;
       this.app.render();
