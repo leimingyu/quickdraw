@@ -13,19 +13,21 @@ const TOOLS: { name: ToolName; label: string }[] = [
   { name: 'arrow', label: 'Arrow' },
 ];
 
-export function mountToolbar(app: App, container: HTMLElement): void {
+export function mountToolbar(app: App, container: HTMLElement): { syncActive: () => void } {
   const bar = document.createElement('div');
   bar.className = 'toolbar';
+  /** Highlight the button for the current tool — so the toolbar tracks a
+   *  programmatic tool switch (e.g. auto-return to Select after drawing an arrow). */
+  const syncActive = () => {
+    for (const b of bar.querySelectorAll('button[data-tool]')) {
+      b.classList.toggle('active', (b as HTMLElement).dataset.tool === app.currentToolName);
+    }
+  };
   for (const t of TOOLS) {
     const btn = document.createElement('button');
     btn.textContent = t.label;
     btn.dataset.tool = t.name;
-    btn.addEventListener('click', () => {
-      app.setTool(t.name);
-      for (const b of bar.querySelectorAll('button[data-tool]')) {
-        b.classList.toggle('active', (b as HTMLElement).dataset.tool === app.currentToolName);
-      }
-    });
+    btn.addEventListener('click', () => { app.setTool(t.name); syncActive(); });
     bar.appendChild(btn);
   }
 
@@ -105,4 +107,6 @@ export function mountToolbar(app: App, container: HTMLElement): void {
   bar.appendChild(pngBtn);
 
   container.appendChild(bar);
+  syncActive(); // initial highlight
+  return { syncActive };
 }

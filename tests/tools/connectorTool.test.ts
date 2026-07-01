@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { App } from '../../src/app';
 import { ConnectorTool } from '../../src/tools/connectorTool';
+import { SelectTool } from '../../src/tools/selectTool';
 import { addNode, createShape, isConnector } from '../../src/model/document';
 import type { Point } from '../../src/model/geometry';
 
@@ -12,6 +13,7 @@ beforeEach(() => {
   document.body.appendChild(mount);
   app = new App(mount);
   tool = new ConnectorTool(app);
+  app.registerTool('select', new SelectTool(app)); // for the auto-switch after drawing
   app.registerTool('arrow', tool);
   app.setTool('arrow');
 });
@@ -62,9 +64,10 @@ describe('ConnectorTool (draw an arrow anywhere)', () => {
     expect(conns()).toHaveLength(0);
   });
 
-  it('stays on the arrow tool for continuous drawing', () => {
+  it('switches to the Select tool after drawing an arrow (so you can move/edit)', () => {
     drag({ x: 10, y: 10 }, { x: 120, y: 120 });
-    expect(app.currentToolName).toBe('arrow');
+    expect(app.currentToolName).toBe('select');
+    expect(app.activeTab.nodes.filter(isConnector)).toHaveLength(1);
   });
 
   it('switching tools mid-drag removes the preview', () => {

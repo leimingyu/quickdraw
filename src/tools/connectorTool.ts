@@ -56,18 +56,21 @@ export class ConnectorTool implements Tool {
     const dx = Math.abs(world.x - this.start.x);
     const dy = Math.abs(world.y - this.start.y);
     const threshold = DRAG_THRESHOLD / this.app.activeTab.viewport.zoom; // screen-constant, like other tolerances
+    const preview = this.preview;
+    this.preview = null; // clear before commit/setTool so onDeactivate can't remove the finished arrow
+    this.start = null;
     if (dx < threshold && dy < threshold) {
-      removeNodes(this.app.activeTab, new Set([this.preview.id])); // a click → no arrow
+      removeNodes(this.app.activeTab, new Set([preview.id])); // a click → no arrow
       this.app.highlightId = undefined;
       this.app.render();
     } else {
-      this.preview.to = this.endpointAt(world);
-      this.app.selection = new Set([this.preview.id]);
+      preview.to = this.endpointAt(world);
+      this.app.selection = new Set([preview.id]);
       this.app.highlightId = undefined;
       this.app.commit();
+      // Hand back to Select so you can immediately move shapes / drag the arrow's ends.
+      this.app.setTool('select');
     }
-    this.preview = null;
-    this.start = null;
   }
 
   onDeactivate(): void {

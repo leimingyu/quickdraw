@@ -33,12 +33,12 @@ for (const kind of ['rect', 'rounded', 'ellipse', 'diamond', 'triangle', 'text']
 }
 app.registerTool('arrow', new ConnectorTool(app));
 
-mountToolbar(app, toolbarHost);
+const toolbar = mountToolbar(app, toolbarHost);
 mountZoomControls(app, toolbarHost.querySelector('.toolbar')!);
 
 const tabs = mountTabs(app, tabStripHost);
 const panel = mountProperties(app, propsHost);
-app.onRender = () => { panel.update(); tabs.update(); };
+app.onRender = () => { panel.update(); tabs.update(); toolbar.syncActive(); };
 app.onSave = () => saveWorkspace(app);
 
 app.render();
