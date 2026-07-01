@@ -1,9 +1,9 @@
 import { Renderer } from './render/renderer';
-import { createWorkspace, getActiveTab, removeNodes, groupNodes, ungroupNodes, expandToGroups, pruneDanglingConnectors, restyleNodes, reorderSelection, type StylePatch } from './model/document';
+import { createWorkspace, getActiveTab, removeNodes, groupNodes, ungroupNodes, expandToGroups, pruneDanglingConnectors, restyleNodes, reorderSelection, isShape, type StylePatch } from './model/document';
 import type { Shape, Tab, Workspace } from './model/types';
 import type { Tool, ToolName } from './tools/types';
 import { History } from './history/history';
-import { zoomAt } from './model/geometry';
+import { zoomAt, hitTest } from './model/geometry';
 
 class NoopTool implements Tool {
   onPointerDown(): void {}
@@ -243,16 +243,19 @@ export class App {
         this.deleteSelection();
         return;
       }
-      // Type-to-edit: with a single shape selected in the select tool, Enter/F2
-      // edits its text and any printable key starts a fresh centered label.
-      // (Space is excluded so it keeps panning; labels just can't start with one.)
-      if (this.currentToolName === 'select' && this.selection.size === 1) {
-        if (ev.key === 'Enter' || ev.key === 'F2') {
-          ev.preventDefault();
-          this.current.beginEdit?.();
-        } else if (ev.key.length === 1 && ev.key !== ' ' && !mod && !ev.altKey) {
-          ev.preventDefault();
-          this.current.beginEdit?.(ev.key);
+      // Type-to-edit (any tool): one shape selected → Enter/F2 edits it, a printable key
+      // starts a fresh label. Space is excluded (it pans); connectors have no text.
+      if (this.selection.size === 1) {
+        const id = [...this.selection][0];
+        const node = this.activeTab.nodes.find((n) => n.id === id);
+        if (node && isShape(node)) {
+          if (ev.key === 'Enter' || ev.key === 'F2') {
+            ev.preventDefault();
+            this.editText(node);
+          } else if (ev.key.length === 1 && ev.key !== ' ' && !mod && !ev.altKey) {
+            ev.preventDefault();
+            this.editText(node, ev.key);
+          }
         }
       }
     }, { signal: this.listeners.signal });
@@ -312,7 +315,10 @@ export class App {
       this.current.onPointerUp(this.world(ev), ev);
       svg.releasePointerCapture(ev.pointerId);
     }, sig);
-    svg.addEventListener('dblclick', (ev) => this.current.onDoubleClick?.(this.world(ev), ev), sig);
+    svg.addEventListener('dblclick', (ev) => {
+      const shape = hitTest(this.activeTab.nodes.filter(isShape), this.world(ev));
+      if (shape) this.editText(shape);
+    }, sig);
     svg.addEventListener('pointercancel', () => this.current.onDeactivate?.(), sig);
   }
 
