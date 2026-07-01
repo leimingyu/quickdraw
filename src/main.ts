@@ -1,5 +1,6 @@
 import { App } from './app';
 import { mountToolbar } from './ui/toolbar';
+import { saveWorkspace } from './io/files';
 import { mountZoomControls } from './ui/zoom';
 import { mountProperties } from './ui/properties';
 import { mountTabs } from './ui/tabs';
@@ -38,5 +39,6 @@ mountZoomControls(app, toolbarHost.querySelector('.toolbar')!);
 const tabs = mountTabs(app, tabStripHost);
 const panel = mountProperties(app, propsHost);
 app.onRender = () => { panel.update(); tabs.update(); };
+app.onSave = () => saveWorkspace(app);
 
 app.render();
