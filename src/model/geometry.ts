@@ -5,8 +5,33 @@ export interface Box { x: number; y: number; w: number; h: number; }
 export type Handle = 'nw' | 'n' | 'ne' | 'e' | 'se' | 's' | 'sw' | 'w';
 
 const MIN_SIZE = 8;
+const DEG = Math.PI / 180;
+
+/** World-unit distance the rotation knob sits above a shape's top edge. */
+export const ROTATION_KNOB_DIST = 24;
+
+const OPPOSITE: Record<Handle, Handle> = {
+  nw: 'se', n: 's', ne: 'sw', e: 'w', se: 'nw', s: 'n', sw: 'ne', w: 'e',
+};
+export const oppositeHandle = (h: Handle): Handle => OPPOSITE[h];
+
+/** Rotate vector (px,py) by `deg` (clockwise in screen coords) around the origin. */
+function rotateVec(px: number, py: number, deg: number): Point {
+  const r = deg * DEG, c = Math.cos(r), s = Math.sin(r);
+  return { x: px * c - py * s, y: px * s + py * c };
+}
+
+/** Rotate `p` by `deg` around `center`. */
+export function rotatePoint(p: Point, center: Point, deg: number): Point {
+  const v = rotateVec(p.x - center.x, p.y - center.y, deg);
+  return { x: center.x + v.x, y: center.y + v.y };
+}
+
+export const shapeCenter = (s: { x: number; y: number; w: number; h: number }): Point =>
+  ({ x: s.x + s.w / 2, y: s.y + s.h / 2 });
 
 export function pointInShape(s: Shape, p: Point): boolean {
+  if (s.rotation) p = rotatePoint(p, shapeCenter(s), -s.rotation); // test in the shape's unrotated frame
   const cx = s.x + s.w / 2;
   const cy = s.y + s.h / 2;
   const rx = s.w / 2;
@@ -67,6 +92,47 @@ export function handlePositions(b: Box): Record<Handle, Point> {
     e: { x: x + w, y: y + h / 2 }, se: { x: x + w, y: y + h },
     s: { x: x + w / 2, y: y + h }, sw: { x, y: y + h }, w: { x, y: y + h / 2 },
   };
+}
+
+/** Handle positions in world space, rotated with the shape. */
+export function shapeHandlePositions(s: Shape): Record<Handle, Point> {
+  const base = handlePositions({ x: s.x, y: s.y, w: s.w, h: s.h });
+  if (!s.rotation) return base;
+  const c = shapeCenter(s);
+  const out = {} as Record<Handle, Point>;
+  for (const k of Object.keys(base) as Handle[]) out[k] = rotatePoint(base[k], c, s.rotation);
+  return out;
+}
+
+/** The rotation knob position: `dist` world units past the top-middle edge, rotated. */
+export function rotationHandlePos(s: Shape, dist: number): Point {
+  const c = shapeCenter(s);
+  return rotatePoint({ x: c.x, y: s.y - dist }, c, s.rotation ?? 0);
+}
+
+/**
+ * Resize a rotated box: drag `handle` to `pointer` (world) while keeping the
+ * opposite handle pinned in world space. Returns the new axis-aligned box (its
+ * rotation is unchanged). With deg=0 this is a normal opposite-corner-fixed resize.
+ */
+export function resizeRotatedBox(box0: Box, handle: Handle, deg: number, pointer: Point): Box {
+  const center0 = shapeCenter(box0);
+  const opp = OPPOSITE[handle];
+  const anchor = rotatePoint(handlePositions(box0)[opp], center0, deg); // fixed in world
+  const d = rotateVec(pointer.x - anchor.x, pointer.y - anchor.y, -deg); // extents in local frame
+  let w = box0.w, h = box0.h;
+  if (handle.includes('e') || handle.includes('w')) w = Math.max(MIN_SIZE, Math.abs(d.x));
+  if (handle.includes('n') || handle.includes('s')) h = Math.max(MIN_SIZE, Math.abs(d.y));
+  const sx = opp.includes('w') ? -1 : opp.includes('e') ? 1 : 0;
+  const sy = opp.includes('n') ? -1 : opp.includes('s') ? 1 : 0;
+  const oa = rotateVec((sx * w) / 2, (sy * h) / 2, deg); // anchor offset from center in the new box
+  const center = { x: anchor.x - oa.x, y: anchor.y - oa.y };
+  return { x: center.x - w / 2, y: center.y - h / 2, w, h };
+}
+
+/** The angle (degrees) from a shape's center to a world point, 0 = straight up. */
+export function angleFromCenter(center: Point, p: Point): number {
+  return Math.atan2(p.x - center.x, center.y - p.y) / DEG;
 }
 
 export function zoomAt(vp: Viewport, factor: number, screenX: number, screenY: number): Viewport {

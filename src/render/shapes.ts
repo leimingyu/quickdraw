@@ -66,6 +66,9 @@ function textEl(s: Shape): SVGTextElement {
 export function shapeToSvg(s: Shape): SVGGElement {
   const g = document.createElementNS(NS, 'g');
   g.setAttribute('data-id', s.id);
+  if (s.rotation) {
+    g.setAttribute('transform', `rotate(${s.rotation} ${s.x + s.w / 2} ${s.y + s.h / 2})`);
+  }
   g.appendChild(primitive(s));
   if (s.text) g.appendChild(textEl(s));
   return g;

@@ -1,6 +1,6 @@
 import type { Connector, ConnectionPoint, Endpoint, Shape, Tab } from '../model/types';
 import { isAttached, isShape } from '../model/document';
-import { handlePositions, type Box, type Point } from '../model/geometry';
+import { shapeHandlePositions, type Handle, type Point } from '../model/geometry';
 
 /** Drop within this many screen px of a connection point to pin an endpoint to it. */
 const PIN_DISTANCE = 22;
@@ -24,31 +24,23 @@ export function endpointCenter(tab: Tab, e: Endpoint): Point | null {
   return { x: e.x, y: e.y };
 }
 
-/** The shape's connection point (one of the 8 resize-handle positions — 4 corners
- *  + 4 edge midpoints) nearest to `target`. So an attached arrow end always lands
- *  on a "small square", PowerPoint-style, and re-snaps as the shape moves. */
-function nearestConnectionPoint(box: Box, target: Point): Point {
-  let best: Point = { x: box.x, y: box.y };
+/** The connection point (of the 8, in world space, rotated with the shape) nearest `target`. */
+function nearestPoint(pts: Record<Handle, Point>, target: Point): Point {
+  let best: Point = { x: 0, y: 0 };
   let bestD = Infinity;
-  for (const p of Object.values(handlePositions(box))) {
+  for (const p of Object.values(pts)) {
     const d = (p.x - target.x) ** 2 + (p.y - target.y) ** 2;
     if (d < bestD) { bestD = d; best = p; }
   }
   return best;
 }
 
-function boxOf(s: Shape): Box {
-  return { x: s.x, y: s.y, w: s.w, h: s.h };
-}
-
 /** Where an attached end sits on its shape: the pinned point if `anchor` is set,
- *  else the connection point facing the other end's center. */
-function attachedPoint(box: Box, e: Endpoint, target: Point): Point {
-  if (isAttached(e) && e.anchor) {
-    const pinned = handlePositions(box)[e.anchor];
-    if (pinned) return pinned; // a valid pinned connection point
-  }
-  return nearestConnectionPoint(box, target); // dynamic (no/invalid anchor)
+ *  else the connection point facing the other end's center. Rotates with the shape. */
+function attachedPoint(shape: Shape, e: Endpoint, target: Point): Point {
+  const pts = shapeHandlePositions(shape);
+  if (isAttached(e) && e.anchor && pts[e.anchor]) return pts[e.anchor];
+  return nearestPoint(pts, target);
 }
 
 /** Attach an endpoint to `shape` at the connection point nearest `world` when the
@@ -56,7 +48,7 @@ function attachedPoint(box: Box, e: Endpoint, target: Point): Point {
 export function attachEndpoint(shape: Shape, world: Point, zoom: number): Endpoint {
   let name: ConnectionPoint | null = null;
   let bestD = Infinity;
-  for (const [handle, p] of Object.entries(handlePositions(boxOf(shape)))) {
+  for (const [handle, p] of Object.entries(shapeHandlePositions(shape))) {
     const d = Math.hypot(p.x - world.x, p.y - world.y);
     if (d < bestD) { bestD = d; name = handle as ConnectionPoint; }
   }
@@ -70,8 +62,8 @@ export function connectorSegment(tab: Tab, c: Connector): Segment | null {
   if (!a || !b) return null;
   const sa = attachedShape(tab, c.from);
   const sb = attachedShape(tab, c.to);
-  const p1 = sa ? attachedPoint(boxOf(sa), c.from, b) : a;
-  const p2 = sb ? attachedPoint(boxOf(sb), c.to, a) : b;
+  const p1 = sa ? attachedPoint(sa, c.from, b) : a;
+  const p2 = sb ? attachedPoint(sb, c.to, a) : b;
   return { x1: p1.x, y1: p1.y, x2: p2.x, y2: p2.y };
 }
 

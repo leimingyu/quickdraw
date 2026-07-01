@@ -1,5 +1,5 @@
 import type { Shape, Tab, Viewport, Connector } from '../model/types';
-import { handlePositions, selectionBounds, type Point } from '../model/geometry';
+import { selectionBounds, shapeHandlePositions, rotationHandlePos, shapeCenter, ROTATION_KNOB_DIST, type Point } from '../model/geometry';
 import type { SnapGuide } from '../model/snapping';
 import { isShape, isConnector } from '../model/document';
 import { shapeToSvg } from './shapes';
@@ -91,7 +91,7 @@ export class Renderer {
     r.setAttribute('pointer-events', 'none');
     this.overlay.appendChild(r);
     // Connection-point targets: drop a connector end on one to pin it there.
-    for (const p of Object.values(handlePositions({ x: node.x, y: node.y, w: node.w, h: node.h }))) {
+    for (const p of Object.values(shapeHandlePositions(node))) {
       const dot = document.createElementNS(NS, 'circle');
       dot.setAttribute('cx', String(p.x));
       dot.setAttribute('cy', String(p.y));
@@ -104,6 +104,7 @@ export class Renderer {
 
   private drawSelection(tab: Tab, selection: Set<string>): void {
     const shapes = tab.nodes.filter((n): n is Shape => selection.has(n.id) && isShape(n));
+    if (shapes.length === 1) { this.drawShapeSelection(shapes[0]); return; }
     const box = selectionBounds(shapes);
     if (!box) return;
     const outline = document.createElementNS(NS, 'rect');
@@ -116,21 +117,55 @@ export class Renderer {
     outline.setAttribute('stroke-width', '1');
     outline.setAttribute('stroke-dasharray', '4 3');
     outline.setAttribute('pointer-events', 'none');
+    this.overlay.appendChild(outline); // multi-select: axis-aligned bounds, no handles
+  }
+
+  /** Selection outline + resize handles + rotation knob for one shape, rotated with it. */
+  private drawShapeSelection(s: Shape): void {
+    const c = shapeCenter(s);
+    const outline = document.createElementNS(NS, 'rect');
+    outline.setAttribute('x', String(s.x));
+    outline.setAttribute('y', String(s.y));
+    outline.setAttribute('width', String(s.w));
+    outline.setAttribute('height', String(s.h));
+    outline.setAttribute('fill', 'none');
+    outline.setAttribute('stroke', '#3b82f6');
+    outline.setAttribute('stroke-width', '1');
+    outline.setAttribute('stroke-dasharray', '4 3');
+    outline.setAttribute('pointer-events', 'none');
+    if (s.rotation) outline.setAttribute('transform', `rotate(${s.rotation} ${c.x} ${c.y})`);
     this.overlay.appendChild(outline);
-    if (shapes.length === 1) {
-      const pos = handlePositions(box);
-      for (const [handle, p] of Object.entries(pos)) {
-        const h = document.createElementNS(NS, 'rect');
-        h.setAttribute('x', String(p.x - 4));
-        h.setAttribute('y', String(p.y - 4));
-        h.setAttribute('width', '8');
-        h.setAttribute('height', '8');
-        h.setAttribute('fill', '#fff');
-        h.setAttribute('stroke', '#3b82f6');
-        h.setAttribute('data-handle', handle);
-        this.overlay.appendChild(h);
-      }
+
+    const pos = shapeHandlePositions(s);
+    for (const [handle, p] of Object.entries(pos)) {
+      const h = document.createElementNS(NS, 'rect');
+      h.setAttribute('x', String(p.x - 4));
+      h.setAttribute('y', String(p.y - 4));
+      h.setAttribute('width', '8');
+      h.setAttribute('height', '8');
+      h.setAttribute('fill', '#fff');
+      h.setAttribute('stroke', '#3b82f6');
+      h.setAttribute('data-handle', handle);
+      this.overlay.appendChild(h);
     }
+    // rotation knob above the top edge, joined to the top-middle handle by a stem
+    const knob = rotationHandlePos(s, ROTATION_KNOB_DIST);
+    const stem = document.createElementNS(NS, 'line');
+    stem.setAttribute('x1', String(pos.n.x));
+    stem.setAttribute('y1', String(pos.n.y));
+    stem.setAttribute('x2', String(knob.x));
+    stem.setAttribute('y2', String(knob.y));
+    stem.setAttribute('stroke', '#3b82f6');
+    stem.setAttribute('pointer-events', 'none');
+    this.overlay.appendChild(stem);
+    const k = document.createElementNS(NS, 'circle');
+    k.setAttribute('cx', String(knob.x));
+    k.setAttribute('cy', String(knob.y));
+    k.setAttribute('r', '5');
+    k.setAttribute('fill', '#fff');
+    k.setAttribute('stroke', '#3b82f6');
+    k.setAttribute('data-rotate', 'true');
+    this.overlay.appendChild(k);
   }
 
   private drawConnectorHandles(tab: Tab, c: Connector): void {

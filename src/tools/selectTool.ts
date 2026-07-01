@@ -1,13 +1,13 @@
 import type { App } from '../app';
 import type { Node, Shape, Connector } from '../model/types';
-import { hitTest, shapeInRect, handlePositions, resizeBox, type Box, type Handle, type Point } from '../model/geometry';
+import { hitTest, shapeInRect, resizeBox, resizeRotatedBox, shapeHandlePositions, rotationHandlePos, angleFromCenter, shapeCenter, ROTATION_KNOB_DIST, type Box, type Handle, type Point } from '../model/geometry';
 import { groupMembers, expandToGroups, isShape, isConnector } from '../model/document';
 import { computeSnap } from '../model/snapping';
 import { connectorHit } from '../render/connector';
 import { EndpointDrag } from './endpointDrag';
 import type { Tool } from './types';
 
-type Mode = 'idle' | 'marquee' | 'move' | 'resize';
+type Mode = 'idle' | 'marquee' | 'move' | 'resize' | 'rotate';
 
 const SNAP_PX = 6; // screen-px tolerance for edge/center alignment snapping while moving
 
@@ -19,6 +19,9 @@ export class SelectTool implements Tool {
   protected activeHandle: Handle | null = null;
   private resizeShape: Shape | null = null;
   private startBox: Box = { x: 0, y: 0, w: 0, h: 0 };
+  private rotateShape: Shape | null = null;
+  private rotateStartAngle = 0;   // pointer angle from center at drag start
+  private rotateStartRotation = 0; // shape's rotation at drag start
   private endpoints: EndpointDrag;
 
   constructor(protected app: App) {
@@ -29,6 +32,14 @@ export class SelectTool implements Tool {
     this.start = world;
     // Drag an endpoint of the selected connector before anything else.
     if (this.endpoints.beginOn(this.singleSelectedConnector(), world)) return;
+    const rot = this.singleSelected();
+    if (rot && this.overRotationHandle(rot, world)) {
+      this.mode = 'rotate';
+      this.rotateShape = rot;
+      this.rotateStartRotation = rot.rotation ?? 0;
+      this.rotateStartAngle = angleFromCenter(shapeCenter(rot), world);
+      return;
+    }
     const handle = this.handleAt(world);
     if (handle) {
       const s = this.singleSelected();
@@ -62,12 +73,21 @@ export class SelectTool implements Tool {
     }
   }
 
-  onPointerMove(world: Point, _ev: PointerEvent): void {
+  onPointerMove(world: Point, ev: PointerEvent): void {
     if (this.endpoints.active) { this.endpoints.move(world); return; }
+    if (this.mode === 'rotate' && this.rotateShape) {
+      const a = angleFromCenter(shapeCenter(this.rotateShape), world);
+      let rot = this.rotateStartRotation + (a - this.rotateStartAngle);
+      if (ev.shiftKey) rot = Math.round(rot / 15) * 15; // Shift snaps to 15°
+      this.rotateShape.rotation = ((rot % 360) + 360) % 360;
+      this.moved = true;
+      this.app.render();
+      return;
+    }
     if (this.mode === 'resize' && this.resizeShape && this.activeHandle) {
-      const dx = world.x - this.start.x;
-      const dy = world.y - this.start.y;
-      const box = resizeBox(this.startBox, this.activeHandle, dx, dy);
+      const box = this.resizeShape.rotation
+        ? resizeRotatedBox(this.startBox, this.activeHandle, this.resizeShape.rotation, world)
+        : resizeBox(this.startBox, this.activeHandle, world.x - this.start.x, world.y - this.start.y);
       Object.assign(this.resizeShape, box);
       this.app.render();
       return;
@@ -110,10 +130,12 @@ export class SelectTool implements Tool {
     this.app.snapGuides = []; // stop drawing alignment guides on release
     if (this.mode === 'marquee') this.applyMarquee(world);
     else if (this.mode === 'resize') this.app.commit();
+    else if (this.mode === 'rotate' && this.moved) this.app.commit();
     else if (this.mode === 'move' && this.moved) this.app.commit();
     this.mode = 'idle';
     this.moved = false;
     this.resizeShape = null;
+    this.rotateShape = null;
     this.activeHandle = null;
     this.app.render();
   }
@@ -181,10 +203,16 @@ export class SelectTool implements Tool {
     const s = this.singleSelected();
     if (!s) return null;
     const tol = 8 / this.app.activeTab.viewport.zoom; // screen-constant tolerance in world units
-    const pos = handlePositions({ x: s.x, y: s.y, w: s.w, h: s.h });
+    const pos = shapeHandlePositions(s); // rotated with the shape
     for (const [handle, p] of Object.entries(pos)) {
       if (Math.abs(world.x - p.x) <= tol && Math.abs(world.y - p.y) <= tol) return handle as Handle;
     }
     return null;
+  }
+
+  private overRotationHandle(s: Shape, world: Point): boolean {
+    const knob = rotationHandlePos(s, ROTATION_KNOB_DIST);
+    const tol = 8 / this.app.activeTab.viewport.zoom;
+    return Math.abs(world.x - knob.x) <= tol && Math.abs(world.y - knob.y) <= tol;
   }
 }
