@@ -1,7 +1,7 @@
 import type { App } from '../app';
 import type { Shape, ShapeKind } from '../model/types';
-import { addNode, createShape } from '../model/document';
-import type { Box, Point } from '../model/geometry';
+import { addNode, createShape, isShape } from '../model/document';
+import { hitTest, type Box, type Point } from '../model/geometry';
 import type { Tool } from './types';
 
 const DEFAULT_W = 120;
@@ -32,6 +32,7 @@ export class ShapeTool implements Tool {
   constructor(private app: App, private kind: ShapeKind) {}
 
   onPointerDown(world: Point): void {
+    if (hitTest(this.app.activeTab.nodes.filter(isShape), world)) return; // don't create on an existing shape
     this.start = world;
     const shape = createShape(this.kind, world.x, world.y, 0, 0);
     addNode(this.app.activeTab, shape);

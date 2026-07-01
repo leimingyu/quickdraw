@@ -106,4 +106,13 @@ describe('ShapeTool', () => {
     app.undo();
     expect(app.activeTab.nodes).toHaveLength(0);
   });
+
+  it('does not create a shape when pressing on an existing shape', () => {
+    const tool = makeTool('rect');
+    drag(tool, { x: 0, y: 0 }, { x: 100, y: 100 }); // shape A covers (0,0)-(100,100)
+    expect(app.activeTab.nodes).toHaveLength(1);
+    tool.onPointerDown({ x: 50, y: 50 }); // press inside A
+    tool.onPointerUp({ x: 50, y: 50 });
+    expect(app.activeTab.nodes).toHaveLength(1); // no second shape created
+  });
 });
