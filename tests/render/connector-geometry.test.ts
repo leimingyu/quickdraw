@@ -12,23 +12,24 @@ function tabWithTwoBoxes() {
 }
 
 describe('connector geometry', () => {
-  it('clips the segment to each shape edge along the center-to-center line', () => {
+  it('snaps each end to the connection point facing the other shape', () => {
     const { tab, a, b } = tabWithTwoBoxes();
     const c = createConnector({ nodeId: a.id }, { nodeId: b.id });
     addNode(tab, c);
     const seg = connectorSegment(tab, c)!;
-    // horizontal line at y=50; leaves A's right edge (x=100) and enters B's left edge (x=300)
+    // aligned boxes → A's right-middle handle (100,50) and B's left-middle (300,50)
     expect(seg).toEqual({ x1: 100, y1: 50, x2: 300, y2: 50 });
   });
 
-  it('re-derives the segment after a shape moves', () => {
+  it('re-snaps to a corner connection point after a shape moves diagonally', () => {
     const { tab, a, b } = tabWithTwoBoxes();
     const c = createConnector({ nodeId: a.id }, { nodeId: b.id });
     addNode(tab, c);
-    b.y = 400; // move B down (>300 so line exits A through bottom, not corner)
+    b.y = 400; // B now far below-right of A
     const seg = connectorSegment(tab, c)!;
-    expect(seg.x1).not.toBe(100); // no longer a clean horizontal exit
-    expect(seg.y2).toBeGreaterThan(50);
+    // A snaps to its bottom-right corner, B to its top-left corner (both facing each other)
+    expect({ x: seg.x1, y: seg.y1 }).toEqual({ x: 100, y: 100 });
+    expect({ x: seg.x2, y: seg.y2 }).toEqual({ x: 300, y: 400 });
   });
 
   it('uses a floating endpoint as-is (for the live preview)', () => {

@@ -1,6 +1,6 @@
 import type { Connector, Endpoint, Shape, Tab } from '../model/types';
 import { isAttached, isShape } from '../model/document';
-import type { Box, Point } from '../model/geometry';
+import { handlePositions, type Box, type Point } from '../model/geometry';
 
 const NS = 'http://www.w3.org/2000/svg';
 
@@ -21,17 +21,17 @@ export function endpointCenter(tab: Tab, e: Endpoint): Point | null {
   return { x: e.x, y: e.y };
 }
 
-/** Point where the ray from the box center toward `toward` crosses the box boundary. */
-function clipBoxEdge(box: Box, toward: Point): Point {
-  const cx = box.x + box.w / 2;
-  const cy = box.y + box.h / 2;
-  const dx = toward.x - cx;
-  const dy = toward.y - cy;
-  if (dx === 0 && dy === 0) return { x: cx, y: cy };
-  const tx = dx !== 0 ? box.w / 2 / Math.abs(dx) : Infinity;
-  const ty = dy !== 0 ? box.h / 2 / Math.abs(dy) : Infinity;
-  const t = Math.min(tx, ty);
-  return { x: cx + dx * t, y: cy + dy * t };
+/** The shape's connection point (one of the 8 resize-handle positions — 4 corners
+ *  + 4 edge midpoints) nearest to `target`. So an attached arrow end always lands
+ *  on a "small square", PowerPoint-style, and re-snaps as the shape moves. */
+function nearestConnectionPoint(box: Box, target: Point): Point {
+  let best: Point = { x: box.x, y: box.y };
+  let bestD = Infinity;
+  for (const p of Object.values(handlePositions(box))) {
+    const d = (p.x - target.x) ** 2 + (p.y - target.y) ** 2;
+    if (d < bestD) { bestD = d; best = p; }
+  }
+  return best;
 }
 
 function boxOf(s: Shape): Box {
@@ -44,8 +44,9 @@ export function connectorSegment(tab: Tab, c: Connector): Segment | null {
   if (!a || !b) return null;
   const sa = attachedShape(tab, c.from);
   const sb = attachedShape(tab, c.to);
-  const p1 = sa ? clipBoxEdge(boxOf(sa), b) : a;
-  const p2 = sb ? clipBoxEdge(boxOf(sb), a) : b;
+  // Each attached end snaps to the connection point facing the other end's center.
+  const p1 = sa ? nearestConnectionPoint(boxOf(sa), b) : a;
+  const p2 = sb ? nearestConnectionPoint(boxOf(sb), a) : b;
   return { x1: p1.x, y1: p1.y, x2: p2.x, y2: p2.y };
 }
 
