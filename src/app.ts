@@ -154,10 +154,11 @@ export class App {
     this.render();
   }
 
-  /** Load a document: swap the workspace, reset history to it, clear selection, render. */
+  /** Load a document: swap the workspace, reset history to it, clear selection, render.
+   *  Honors the loaded workspace's activeTabId (deserialize guarantees it is valid),
+   *  so reopening a file lands on the tab you were viewing when you saved. */
   replaceWorkspace(ws: Workspace): void {
     this.workspace = ws;
-    this.workspace.activeTabId = this.workspace.tabs[0].id; // always open on the first tab
     this.workspace.tabs.forEach(pruneDanglingConnectors);
     this.history = new History(this.workspace); // the opened file is the new baseline
     this.selection.clear();

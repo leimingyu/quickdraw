@@ -15,10 +15,18 @@ describe('App document I/O touchpoints', () => {
   it('replaceWorkspace swaps in the new workspace and renders it', () => {
     const ws = createWorkspace();
     addTab(ws, 'Loaded');
-    addNode(ws.tabs[0], createShape('rect', 0, 0, 40, 40));
+    addNode(app.activeTab, createShape('rect', 0, 0, 10, 10)); // node on the CURRENT doc
     app.replaceWorkspace(ws);
     expect(app.workspace).toBe(ws);
     expect(app.workspace.tabs).toHaveLength(2);
+  });
+
+  it('replaceWorkspace lands on the loaded workspace\'s active tab (round-trip fidelity)', () => {
+    const ws = createWorkspace();                          // Tab 1
+    const second = addTab(ws, 'Second');                   // addTab makes Second active
+    addNode(second, createShape('rect', 0, 0, 40, 40));    // content on the active tab
+    app.replaceWorkspace(ws);
+    expect(app.activeTab.id).toBe(second.id);              // honored the saved active tab, not tabs[0]
     expect(app.activeTab.nodes).toHaveLength(1);
   });
 
