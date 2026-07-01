@@ -49,6 +49,8 @@ npm run preview  # serve the built dist/ locally
 | Commit / cancel text | **Enter** / click away &nbsp;·&nbsp; **Esc** |
 | Exit draw mode / deselect | **Esc** |
 | Delete selection | **Delete** / **Backspace** |
+| Copy / cut / paste | **⌘/Ctrl+C** / **⌘/Ctrl+X** / **⌘/Ctrl+V** |
+| Duplicate selection | **⌘/Ctrl+D** |
 | Group / ungroup | **⌘/Ctrl+G** / **⌘/Ctrl+Shift+G** |
 | Undo / redo | **⌘/Ctrl+Z** / **⌘/Ctrl+Shift+Z** (or **Ctrl+Y**) |
 | Zoom | **⌘/Ctrl + scroll**, or the −/+/100% buttons |

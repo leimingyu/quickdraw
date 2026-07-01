@@ -1,9 +1,12 @@
 import { Renderer } from './render/renderer';
-import { createWorkspace, getActiveTab, removeNodes, groupNodes, ungroupNodes, expandToGroups, pruneDanglingConnectors, restyleNodes, reorderSelection, isShape, addTab as addTabModel, removeTab as removeTabModel, renameTab as renameTabModel, type StylePatch } from './model/document';
-import type { Shape, Tab, Workspace } from './model/types';
+import { createWorkspace, getActiveTab, addNode, removeNodes, groupNodes, ungroupNodes, expandToGroups, pruneDanglingConnectors, restyleNodes, reorderSelection, isShape, addTab as addTabModel, removeTab as removeTabModel, renameTab as renameTabModel, type StylePatch } from './model/document';
+import { copyNodes, pasteNodes } from './model/copyPaste';
+import type { Node, Shape, Tab, Workspace } from './model/types';
 import type { Tool, ToolName } from './tools/types';
 import { History } from './history/history';
 import { zoomAt, hitTest } from './model/geometry';
+
+const PASTE_STEP = 16; // world-unit offset applied to each paste so it doesn't cover the original
 
 class NoopTool implements Tool {
   onPointerDown(): void {}
@@ -24,6 +27,8 @@ export class App {
   private current: Tool = new NoopTool();
   private listeners = new AbortController();
   private history: History;
+  private clipboard: Node[] = []; // in-app clipboard (survives across tabs, not the OS clipboard)
+  private pasteOffset = 0;
   private spaceDown = false;
   private panning = false;
   private panLast = { x: 0, y: 0 };
@@ -239,6 +244,39 @@ export class App {
     this.commit();
   }
 
+  /** Copy the selection (whole groups) to the in-app clipboard. No history entry. */
+  copySelection(): void {
+    if (this.selection.size === 0) return;
+    this.clipboard = copyNodes(this.activeTab, this.selection);
+    this.pasteOffset = 0; // next paste starts one step out from the original
+  }
+
+  /** Copy then delete the selection (undoable via the delete). */
+  cut(): void {
+    if (this.selection.size === 0) return;
+    this.copySelection();
+    this.deleteSelection();
+  }
+
+  /** Paste the clipboard into the active tab, offset and selected (undoable). */
+  paste(): void {
+    if (this.clipboard.length === 0) return;
+    this.pasteOffset += PASTE_STEP;
+    const pasted = pasteNodes(this.clipboard, this.pasteOffset, this.pasteOffset);
+    pasted.forEach((n) => addNode(this.activeTab, n));
+    this.selection = new Set(pasted.map((n) => n.id));
+    this.commit();
+  }
+
+  /** Duplicate the selection in place (offset), without touching the clipboard. */
+  duplicate(): void {
+    if (this.selection.size === 0) return;
+    const pasted = pasteNodes(copyNodes(this.activeTab, this.selection), PASTE_STEP, PASTE_STEP);
+    pasted.forEach((n) => addNode(this.activeTab, n));
+    this.selection = new Set(pasted.map((n) => n.id));
+    this.commit();
+  }
+
   resetTab(): void {
     this.activeTab.nodes = [];
     this.selection.clear();
@@ -304,6 +342,24 @@ export class App {
         ev.preventDefault();
         if (ev.shiftKey) this.ungroup();
         else this.group();
+        return;
+      }
+      // Clipboard: only intercept when there's something to act on, so an empty
+      // ⌘C/⌘X/⌘V still does the browser's normal thing (e.g. copy selected UI text).
+      if (mod && ev.key.toLowerCase() === 'c') {
+        if (this.selection.size) { ev.preventDefault(); this.copySelection(); }
+        return;
+      }
+      if (mod && ev.key.toLowerCase() === 'x') {
+        if (this.selection.size) { ev.preventDefault(); this.cut(); }
+        return;
+      }
+      if (mod && ev.key.toLowerCase() === 'v') {
+        if (this.clipboard.length) { ev.preventDefault(); this.paste(); }
+        return;
+      }
+      if (mod && ev.key.toLowerCase() === 'd') {
+        if (this.selection.size) { ev.preventDefault(); this.duplicate(); }
         return;
       }
       if (ev.key === 'Delete' || ev.key === 'Backspace') {
