@@ -1,7 +1,6 @@
 import { App } from './app';
-import { mountToolbar } from './ui/toolbar';
+import { mountMenuBar } from './ui/menubar';
 import { saveWorkspace } from './io/files';
-import { mountZoomControls } from './ui/zoom';
 import { mountProperties } from './ui/properties';
 import { mountTabs } from './ui/tabs';
 import { ShapeTool } from './tools/shapeTool';
@@ -33,12 +32,11 @@ for (const kind of ['rect', 'rounded', 'ellipse', 'diamond', 'triangle', 'text']
 }
 app.registerTool('arrow', new ConnectorTool(app));
 
-const toolbar = mountToolbar(app, toolbarHost);
-mountZoomControls(app, toolbarHost.querySelector('.toolbar')!);
+const menubar = mountMenuBar(app, toolbarHost);
 
 const tabs = mountTabs(app, tabStripHost);
 const panel = mountProperties(app, propsHost);
-app.onRender = () => { panel.update(); tabs.update(); toolbar.syncActive(); };
+app.onRender = () => { panel.update(); tabs.update(); menubar.syncActive(); };
 app.onSave = () => saveWorkspace(app);
 
 app.render();

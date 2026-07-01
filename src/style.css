@@ -2,9 +2,21 @@
 html, body, #app { margin: 0; height: 100%; }
 body { font: 14px system-ui, sans-serif; }
 #app { display: flex; flex-direction: column; }
-.toolbar { display: flex; gap: 4px; padding: 6px; border-bottom: 1px solid #ddd; }
-.toolbar button { padding: 4px 10px; cursor: pointer; }
-.toolbar button.active { background: #3b82f6; color: #fff; }
+.menubar { display: flex; gap: 2px; padding: 3px 6px; border-bottom: 1px solid #ddd;
+  background: #f3f4f6; user-select: none; }
+.menu { position: relative; }
+.menu-title { padding: 5px 12px; cursor: pointer; background: none; border: none; font: inherit;
+  border-radius: 4px; white-space: nowrap; }
+.menu-title:hover, .menu.open .menu-title { background: #e5e7eb; }
+.menu-items { display: none; position: absolute; top: 100%; left: 0; min-width: 200px;
+  background: #fff; border: 1px solid #ccc; border-radius: 6px; padding: 4px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.16); z-index: 100; }
+.menu.open .menu-items { display: block; }
+.menu-item { display: block; width: 100%; text-align: left; padding: 6px 12px; background: none;
+  border: none; font: inherit; cursor: pointer; border-radius: 4px; white-space: nowrap; }
+.menu-item:hover { background: #eff6ff; }
+.menu-item.active { background: #3b82f6; color: #fff; }
+.menu-sep { height: 1px; background: #eaeaea; margin: 4px 6px; }
 .canvas-host { flex: 1; min-height: 0; }
 .app-body { display: flex; flex: 1; min-height: 0; }
 .canvas-host { flex: 1; min-width: 0; }
