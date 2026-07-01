@@ -31,8 +31,11 @@ export interface ConnectorStyle {
   arrowEnd: boolean;
   arrowStart?: boolean;
   dashed?: boolean;
-  routing?: 'straight' | 'elbow'; // absent/'straight' = direct line; 'elbow' = orthogonal
+  routing?: Routing; // absent/'straight' = direct line; 'elbow' = orthogonal; 'curved' = bezier
 }
+
+/** Connector path style. */
+export type Routing = 'straight' | 'elbow' | 'curved';
 
 // An attached endpoint pins to a specific connection point when `anchor` is set
 // (fixed, PowerPoint-style); without it, the endpoint auto-snaps to the nearest

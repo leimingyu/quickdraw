@@ -1,7 +1,7 @@
 import { Renderer } from './render/renderer';
 import { createWorkspace, getActiveTab, addNode, removeNodes, groupNodes, ungroupNodes, expandToGroups, pruneDanglingConnectors, restyleNodes, reorderSelection, isShape, addTab as addTabModel, removeTab as removeTabModel, renameTab as renameTabModel, type StylePatch } from './model/document';
 import { copyNodes, pasteNodes } from './model/copyPaste';
-import type { Node, Shape, Tab, Workspace } from './model/types';
+import type { Node, Routing, Shape, Tab, Workspace } from './model/types';
 import type { SnapGuide } from './model/snapping';
 import type { Tool, ToolName } from './tools/types';
 import { History } from './history/history';
@@ -20,6 +20,7 @@ export class App {
   selection = new Set<string>();
   highlightId?: string;
   snapGuides: SnapGuide[] = []; // alignment guides shown during a snapped drag
+  connectorRouting: Routing = 'straight'; // routing applied to newly drawn connectors
   onRender?: () => void;
   onSave?: () => void;
   readonly renderer: Renderer;

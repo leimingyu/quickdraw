@@ -1,5 +1,5 @@
 import type { App } from '../app';
-import type { Node } from '../model/types';
+import type { Node, Routing } from '../model/types';
 import { isShape, isConnector, type StylePatch } from '../model/document';
 
 export function mountProperties(app: App, container: HTMLElement): { update: () => void } {
@@ -45,7 +45,7 @@ export function mountProperties(app: App, container: HTMLElement): { update: () 
     if (firstConn) {
       dock.appendChild(toggleRow('Arrow start', 'arrowStart', !!firstConn.style.arrowStart, (v) => ({ arrowStart: v })));
       dock.appendChild(toggleRow('Arrow end', 'arrowEnd', firstConn.style.arrowEnd !== false, (v) => ({ arrowEnd: v })));
-      dock.appendChild(toggleRow('Elbow', 'routing', firstConn.style.routing === 'elbow', (v) => ({ routing: v ? 'elbow' : 'straight' })));
+      dock.appendChild(routingRow(firstConn.style.routing ?? 'straight'));
     }
     dock.appendChild(zorderRow());
   }
@@ -89,6 +89,27 @@ export function mountProperties(app: App, container: HTMLElement): { update: () 
       app.commitStyle();
     });
     row.appendChild(btn);
+    return row;
+  }
+
+  function routingRow(current: Routing): HTMLElement {
+    const row = labeledRow('Type');
+    const seg = document.createElement('div');
+    seg.className = 'seg';
+    const opts: [Routing, string][] = [['straight', 'Straight'], ['elbow', 'Elbow'], ['curved', 'Curved']];
+    for (const [kind, label] of opts) {
+      const b = document.createElement('button');
+      b.textContent = label;
+      b.dataset.routing = kind;
+      b.classList.toggle('active', current === kind);
+      b.addEventListener('click', () => {
+        app.connectorRouting = kind; // also the default for the next drawn connector
+        app.restyle({ routing: kind });
+        app.commitStyle();
+      });
+      seg.appendChild(b);
+    }
+    row.appendChild(seg);
     return row;
   }
 

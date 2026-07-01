@@ -18,12 +18,16 @@ beforeEach(() => {
 afterEach(() => app.destroy());
 
 const btn = (tool: string) => host.querySelector<HTMLButtonElement>(`.tool-btn[data-tool="${tool}"]`)!;
+const conn = (routing: string) => host.querySelector<HTMLButtonElement>(`.tool-btn[data-routing="${routing}"]`)!;
 
 describe('tool palette', () => {
-  it('renders a shortcut button for every tool, each with an icon', () => {
-    const tools = [...host.querySelectorAll('.tool-btn')].map((b) => (b as HTMLElement).dataset.tool);
-    expect(tools).toEqual(['select', 'rect', 'rounded', 'ellipse', 'diamond', 'triangle', 'text', 'arrow']);
-    expect(host.querySelectorAll('.tool-btn svg')).toHaveLength(8);
+  it('renders the shape shortcuts plus the three connector types', () => {
+    const btns = [...host.querySelectorAll<HTMLElement>('.tool-btn')];
+    expect(btns).toHaveLength(10);
+    expect(btns.slice(0, 7).map((b) => b.dataset.tool))
+      .toEqual(['select', 'rect', 'rounded', 'ellipse', 'diamond', 'triangle', 'text']);
+    expect(btns.slice(7).map((b) => b.dataset.routing)).toEqual(['straight', 'elbow', 'curved']);
+    expect(host.querySelectorAll('.tool-btn svg')).toHaveLength(10);
   });
 
   it('clicking a shape shortcut selects that tool', () => {
@@ -31,9 +35,13 @@ describe('tool palette', () => {
     expect(app.currentToolName).toBe('ellipse');
   });
 
-  it('clicking the connector shortcut selects the arrow tool', () => {
-    btn('arrow').click();
+  it('clicking a connector type selects the arrow tool with that routing, and highlights it', () => {
+    conn('curved').click();
     expect(app.currentToolName).toBe('arrow');
+    expect(app.connectorRouting).toBe('curved');
+    palette.syncActive();
+    expect(conn('curved').classList.contains('active')).toBe(true);
+    expect(conn('straight').classList.contains('active')).toBe(false);
   });
 
   it('syncActive highlights only the current tool', () => {

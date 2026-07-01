@@ -79,11 +79,35 @@ export function elbowRoute(seg: Segment): Point[] {
   return [{ x: x1, y: y1 }, { x: x1, y: my }, { x: x2, y: my }, { x: x2, y: y2 }];
 }
 
-/** The connector's drawn points: a 2-point straight line, or the elbow route. */
+/** Control point for the curved (quadratic) route: chord midpoint pushed perpendicular. */
+export function curveControl(seg: Segment): Point {
+  const { x1, y1, x2, y2 } = seg;
+  const dx = x2 - x1, dy = y2 - y1;
+  const len = Math.hypot(dx, dy) || 1;
+  const k = len * 0.22; // bulge as a fraction of span
+  return { x: (x1 + x2) / 2 - (dy / len) * k, y: (y1 + y2) / 2 + (dx / len) * k };
+}
+
+function sampleQuad(p0: Point, c: Point, p1: Point, n: number): Point[] {
+  const pts: Point[] = [];
+  for (let i = 0; i <= n; i++) {
+    const t = i / n, u = 1 - t;
+    pts.push({
+      x: u * u * p0.x + 2 * u * t * c.x + t * t * p1.x,
+      y: u * u * p0.y + 2 * u * t * c.y + t * t * p1.y,
+    });
+  }
+  return pts;
+}
+
+/** The connector's drawn points: straight (2 pts), elbow (4 pts), or a sampled curve. */
 export function connectorRoute(tab: Tab, c: Connector): Point[] | null {
   const seg = connectorSegment(tab, c);
   if (!seg) return null;
   if (c.style.routing === 'elbow') return elbowRoute(seg);
+  if (c.style.routing === 'curved') {
+    return sampleQuad({ x: seg.x1, y: seg.y1 }, curveControl(seg), { x: seg.x2, y: seg.y2 }, 16);
+  }
   return [{ x: seg.x1, y: seg.y1 }, { x: seg.x2, y: seg.y2 }];
 }
 
@@ -121,6 +145,12 @@ export function connectorToSvg(tab: Tab, c: Connector, selected: boolean): SVGGE
     poly.setAttribute('points', elbowRoute(seg).map((p) => `${p.x},${p.y}`).join(' '));
     poly.setAttribute('fill', 'none'); // a polyline fills by default — must disable
     el = poly;
+  } else if (c.style.routing === 'curved') {
+    const path = document.createElementNS(NS, 'path');
+    const cc = curveControl(seg);
+    path.setAttribute('d', `M${seg.x1} ${seg.y1} Q${cc.x} ${cc.y} ${seg.x2} ${seg.y2}`);
+    path.setAttribute('fill', 'none');
+    el = path;
   } else {
     const line = document.createElementNS(NS, 'line');
     line.setAttribute('x1', String(seg.x1));

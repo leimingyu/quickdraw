@@ -70,6 +70,17 @@ describe('ConnectorTool (draw an arrow anywhere)', () => {
     expect(app.activeTab.nodes.filter(isConnector)).toHaveLength(1);
   });
 
+  it('applies the app connectorRouting to a new connector', () => {
+    app.connectorRouting = 'curved';
+    drag({ x: 10, y: 10 }, { x: 120, y: 120 });
+    expect(conns()[0].style.routing).toBe('curved');
+  });
+
+  it('leaves routing unset for a straight connector (byte-identical to before)', () => {
+    drag({ x: 10, y: 10 }, { x: 120, y: 120 }); // default routing is 'straight'
+    expect(conns()[0].style.routing).toBeUndefined();
+  });
+
   it('switching tools mid-drag removes the preview', () => {
     tool.onPointerDown({ x: 10, y: 10 });
     tool.onPointerMove({ x: 120, y: 120 });

@@ -37,6 +37,7 @@ export class ConnectorTool implements Tool {
     if (this.endpoints.beginAny(world)) return;
     this.start = world;
     const c = createConnector(this.endpointAt(world), { x: world.x, y: world.y });
+    if (this.app.connectorRouting !== 'straight') c.style.routing = this.app.connectorRouting; // straight stays unset
     addNode(this.app.activeTab, c);
     this.preview = c;
     this.app.selection.clear();
