@@ -97,4 +97,22 @@ describe('tab strip UI', () => {
     input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
     expect(app.activeTab.name).toBe('Tab 1');
   });
+
+  it('blurring a blank rename keeps the previous name', () => {
+    (tabs()[0].querySelector('.tab-name') as HTMLElement)
+      .dispatchEvent(new MouseEvent('dblclick', { bubbles: true }));
+    const input = host.querySelector('input.tab-rename') as HTMLInputElement;
+    input.value = '   ';
+    input.dispatchEvent(new FocusEvent('blur'));
+    expect(app.activeTab.name).toBe('Tab 1');
+    expect(host.querySelector('input.tab-rename')).toBeNull();
+  });
+
+  it('update() does not tear down an open rename input (no focus drop mid-edit)', () => {
+    (tabs()[0].querySelector('.tab-name') as HTMLElement)
+      .dispatchEvent(new MouseEvent('dblclick', { bubbles: true }));
+    expect(host.querySelector('input.tab-rename')).toBeTruthy();
+    strip.update(); // a stray render while editing must not wipe the input
+    expect(host.querySelector('input.tab-rename')).toBeTruthy();
+  });
 });
