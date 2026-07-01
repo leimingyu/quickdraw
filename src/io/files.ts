@@ -17,8 +17,14 @@ function downloadBlob(blob: Blob, filename: string): void {
   const a = document.createElement('a');
   a.href = url;
   a.download = filename;
+  a.rel = 'noopener';
+  document.body.appendChild(a); // some browsers only honor a detached-anchor click when it's in the DOM
   a.click();
-  URL.revokeObjectURL(url);
+  a.remove();
+  // Revoke on a later tick, NOT synchronously: Chrome resolves the download's
+  // filename from the blob URL asynchronously, so revoking immediately drops the
+  // `download` name hint and the file is saved as the blob's UUID with no extension.
+  setTimeout(() => URL.revokeObjectURL(url), 10_000);
 }
 
 export async function saveWorkspace(app: App): Promise<void> {
