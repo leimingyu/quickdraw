@@ -26,6 +26,12 @@ export class App {
   private spaceDown = false;
   private panning = false;
   private panLast = { x: 0, y: 0 };
+  // Manual double-click detection on pointerup. We can't rely on the native
+  // `dblclick` event: tools that re-render on pointerdown (e.g. Select) replace
+  // the pressed element before the release, so the browser never synthesizes a
+  // click/dblclick. Tracking pointer-up timing/position works in every tool.
+  private lastTapAt = 0;
+  private lastTap = { x: 0, y: 0 };
 
   constructor(mount: HTMLElement, initial?: Workspace) {
     this.workspace = initial ?? createWorkspace();
@@ -313,13 +319,27 @@ export class App {
     svg.addEventListener('pointermove', (ev) => this.current.onPointerMove(this.world(ev), ev), sig);
     svg.addEventListener('pointerup', (ev) => {
       this.current.onPointerUp(this.world(ev), ev);
-      svg.releasePointerCapture(ev.pointerId);
-    }, sig);
-    svg.addEventListener('dblclick', (ev) => {
-      const shape = hitTest(this.activeTab.nodes.filter(isShape), this.world(ev));
-      if (shape) this.editText(shape);
+      if (svg.hasPointerCapture?.(ev.pointerId)) svg.releasePointerCapture(ev.pointerId);
+      this.detectDoubleClick(ev);
     }, sig);
     svg.addEventListener('pointercancel', () => this.current.onDeactivate?.(), sig);
+  }
+
+  /** Two pointer-ups close in time and space over a shape = double-click → edit it.
+   *  Works in any tool (unlike the native `dblclick`, which render-on-press suppresses). */
+  private detectDoubleClick(ev: PointerEvent): void {
+    const now = performance.now();
+    const near = Math.abs(ev.clientX - this.lastTap.x) <= 6 && Math.abs(ev.clientY - this.lastTap.y) <= 6;
+    // A second up within 400ms and ~6px of the first = double-click. Reset after
+    // firing so a triple-click (or a stray follow-up up) doesn't re-fire.
+    if (this.lastTapAt !== 0 && now - this.lastTapAt <= 400 && near) {
+      this.lastTapAt = 0;
+      const shape = hitTest(this.activeTab.nodes.filter(isShape), this.world(ev));
+      if (shape) this.editText(shape);
+      return;
+    }
+    this.lastTapAt = now;
+    this.lastTap = { x: ev.clientX, y: ev.clientY };
   }
 
   private world(ev: { clientX: number; clientY: number }) {

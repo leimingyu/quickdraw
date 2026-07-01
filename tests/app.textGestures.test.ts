@@ -17,6 +17,16 @@ afterEach(() => app.destroy());
 
 const editor = () => document.querySelector('input.text-editor') as HTMLInputElement | null;
 
+// Simulate a real double-click: two pointer-ups close in time/space at the same
+// spot. The app detects double-clicks on pointerup (not the native `dblclick`,
+// which render-on-press suppresses), so this drives the actual code path.
+const pointerUp = (x: number, y: number) =>
+  app.renderer.svg.dispatchEvent(new MouseEvent('pointerup', { clientX: x, clientY: y, bubbles: true }));
+const doubleClick = (x: number, y: number) => {
+  pointerUp(x, y);
+  pointerUp(x, y);
+};
+
 describe('editing text in any tool', () => {
   it('type-to-edit opens the editor while a shape tool is active', () => {
     app.setTool('rect');
@@ -32,17 +42,17 @@ describe('editing text in any tool', () => {
     const s = createShape('rect', 0, 0, 100, 100);
     addNode(app.activeTab, s);
     app.render();
-    app.renderer.svg.dispatchEvent(new MouseEvent('dblclick', { clientX: 50, clientY: 50, bubbles: true }));
+    doubleClick(50, 50);
     expect(editor()).toBeTruthy();
     expect(app.selection.has(s.id)).toBe(true);
   });
 
-  it('double-click still works in the select tool', () => {
+  it('double-click edits a shape in the select tool (render-on-press does not suppress it)', () => {
     app.setTool('select');
     const s = createShape('rect', 0, 0, 100, 100);
     addNode(app.activeTab, s);
     app.render();
-    app.renderer.svg.dispatchEvent(new MouseEvent('dblclick', { clientX: 50, clientY: 50, bubbles: true }));
+    doubleClick(50, 50);
     expect(editor()).toBeTruthy();
   });
 
@@ -50,7 +60,16 @@ describe('editing text in any tool', () => {
     app.setTool('select');
     addNode(app.activeTab, createShape('rect', 0, 0, 100, 100));
     app.render();
-    app.renderer.svg.dispatchEvent(new MouseEvent('dblclick', { clientX: 400, clientY: 400, bubbles: true }));
+    doubleClick(400, 400);
+    expect(editor()).toBeNull();
+  });
+
+  it('two separated single clicks do not open the editor', () => {
+    app.setTool('select');
+    const s = createShape('rect', 0, 0, 100, 100);
+    addNode(app.activeTab, s);
+    app.render();
+    pointerUp(50, 50); // one lone up — not a double-click
     expect(editor()).toBeNull();
   });
 
