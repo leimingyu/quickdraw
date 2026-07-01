@@ -1,9 +1,13 @@
 import type { App } from '../app';
 import { serializeWorkspace, deserializeWorkspace } from './serialize';
 import { tabToSvgString } from '../render/exportSvg';
+import { pngWithDpi } from './png';
 import { showToast } from '../ui/toast';
 
-const SCALE = 2; // PNG raster scale for crispness
+// SVG user units are CSS px (96 per inch). Rasterizing at EXPORT_DPI/96 and tagging
+// the PNG with that DPI yields a print-quality 300-DPI image at its natural size.
+const EXPORT_DPI = 300;
+const SCALE = EXPORT_DPI / 96; // = 3.125
 const JSON_TYPES = [{ description: 'QuickDraw drawing', accept: { 'application/json': ['.json'] } }];
 let fileHandle: any = null; // File System Access handle remembered for save-in-place
 
@@ -128,8 +132,10 @@ export function exportTabPng(app: App): void {
     ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
     canvas.toBlob((blob) => {
       if (!blob) return;
-      downloadBlob(blob, filename);
-      showToast(`Exported "${filename}" — check your Downloads folder`);
+      void pngWithDpi(blob, EXPORT_DPI).then((tagged) => {
+        downloadBlob(tagged, filename);
+        showToast(`Exported "${filename}" (${EXPORT_DPI} DPI) — check your Downloads folder`);
+      });
     }, 'image/png');
   };
   img.onerror = () => URL.revokeObjectURL(url); // don't leak the blob URL if the SVG can't be decoded
