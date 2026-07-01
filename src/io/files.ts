@@ -99,9 +99,12 @@ export function exportTabPng(app: App): void {
     const canvas = document.createElement('canvas');
     canvas.width = img.width * SCALE;
     canvas.height = img.height * SCALE;
-    canvas.getContext('2d')!.drawImage(img, 0, 0, canvas.width, canvas.height);
+    const ctx = canvas.getContext('2d');
     URL.revokeObjectURL(url);
+    if (!ctx) return; // canvas unavailable — nothing to export
+    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
     canvas.toBlob((blob) => { if (blob) downloadBlob(blob, `${name}.png`); }, 'image/png');
   };
+  img.onerror = () => URL.revokeObjectURL(url); // don't leak the blob URL if the SVG can't be decoded
   img.src = url;
 }
