@@ -26,3 +26,9 @@ body { font: 14px system-ui, sans-serif; }
 .tab-close:hover { color: #e11d48; }
 .tab-add { border: 1px solid #ddd; background: #fff; cursor: pointer; border-radius: 6px; padding: 2px 8px; }
 .tab-rename { width: 110px; font: inherit; box-sizing: border-box; }
+.toast-container { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
+  display: flex; flex-direction: column; gap: 8px; z-index: 1000; pointer-events: none; }
+.toast { background: #1e1e1e; color: #fff; padding: 10px 16px; border-radius: 8px;
+  font-size: 14px; box-shadow: 0 4px 12px rgba(0,0,0,0.25);
+  opacity: 0; transform: translateY(10px); transition: opacity 0.25s, transform 0.25s; }
+.toast.toast-show { opacity: 1; transform: translateY(0); }

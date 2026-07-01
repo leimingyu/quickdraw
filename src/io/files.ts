@@ -1,6 +1,7 @@
 import type { App } from '../app';
 import { serializeWorkspace, deserializeWorkspace } from './serialize';
 import { tabToSvgString } from '../render/exportSvg';
+import { showToast } from '../ui/toast';
 
 const SCALE = 2; // PNG raster scale for crispness
 const JSON_TYPES = [{ description: 'QuickDraw drawing', accept: { 'application/json': ['.json'] } }];
@@ -118,6 +119,7 @@ export function exportTabSvg(app: App): void {
   if (!filename) return; // cancelled
   const svg = tabToSvgString(app.activeTab);
   downloadBlob(new Blob([svg], { type: 'image/svg+xml' }), filename);
+  showToast(`Exported "${filename}" — check your Downloads folder`);
 }
 
 export function exportTabPng(app: App): void {
@@ -134,7 +136,11 @@ export function exportTabPng(app: App): void {
     URL.revokeObjectURL(url);
     if (!ctx) return; // canvas unavailable — nothing to export
     ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-    canvas.toBlob((blob) => { if (blob) downloadBlob(blob, filename); }, 'image/png');
+    canvas.toBlob((blob) => {
+      if (!blob) return;
+      downloadBlob(blob, filename);
+      showToast(`Exported "${filename}" — check your Downloads folder`);
+    }, 'image/png');
   };
   img.onerror = () => URL.revokeObjectURL(url); // don't leak the blob URL if the SVG can't be decoded
   img.src = url;
