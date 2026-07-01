@@ -16,9 +16,12 @@ describe('App document I/O touchpoints', () => {
     const ws = createWorkspace();
     addTab(ws, 'Loaded');
     addNode(app.activeTab, createShape('rect', 0, 0, 10, 10)); // node on the CURRENT doc
+    let rendered = 0;
+    app.onRender = () => { rendered++; };
     app.replaceWorkspace(ws);
     expect(app.workspace).toBe(ws);
     expect(app.workspace.tabs).toHaveLength(2);
+    expect(rendered).toBeGreaterThan(0); // render fired on load
   });
 
   it('replaceWorkspace lands on the loaded workspace\'s active tab (round-trip fidelity)', () => {
