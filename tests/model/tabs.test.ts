@@ -33,6 +33,16 @@ describe('tab model mutators', () => {
     expect(ws.activeTabId).toBe(t2.id);
   });
 
+  it('removeTab activates the left neighbor when a middle active tab is closed', () => {
+    const ws = createWorkspace();     // Tab 1
+    const t2 = addTab(ws);           // Tab 2
+    const t3 = addTab(ws);           // Tab 3
+    ws.activeTabId = t2.id;           // middle tab active
+    removeTab(ws, t2.id);             // i=1 -> left neighbor tabs[0]
+    expect(ws.tabs.map((t) => t.id)).toEqual([ws.tabs[0].id, t3.id]);
+    expect(ws.activeTabId).toBe(ws.tabs[0].id);
+  });
+
   it('removeTab activates the new first tab when the first (active) tab is closed', () => {
     const ws = createWorkspace();     // Tab 1
     const first = ws.tabs[0];
