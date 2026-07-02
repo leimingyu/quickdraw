@@ -92,6 +92,7 @@
     "lib": ["ES2022", "DOM", "DOM.Iterable"],
     "types": ["vitest/globals"],
     "skipLibCheck": true,
+    "noEmit": true,
     "isolatedModules": true,
     "verbatimModuleSyntax": true
   },
@@ -560,8 +561,8 @@ export function resizeBox(box: Box, handle: Handle, dx: number, dy: number): Box
   if (handle.includes('s')) h += dy;
   if (handle.includes('w')) { x += dx; w -= dx; }
   if (handle.includes('n')) { y += dy; h -= dy; }
-  if (w < MIN_SIZE) w = MIN_SIZE;
-  if (h < MIN_SIZE) h = MIN_SIZE;
+  if (w < MIN_SIZE) { if (handle.includes('w')) x -= (MIN_SIZE - w); w = MIN_SIZE; }
+  if (h < MIN_SIZE) { if (handle.includes('n')) y -= (MIN_SIZE - h); h = MIN_SIZE; }
   return { x, y, w, h };
 }
 
@@ -956,7 +957,8 @@ export class App {
     this.currentToolName = name;
     this.current = this.tools.get(name) ?? new NoopTool();
     this.current.onActivate?.();
-    this.selection.clear();
+    // Selection persists across tool switches; it is cleared only by explicit
+    // user actions (clicking empty canvas, Esc, or delete).
     this.render();
   }
 
@@ -971,16 +973,17 @@ export class App {
 
   private bindPointerEvents(): void {
     const svg = this.renderer.svg;
+    const sig = { signal: this.listeners.signal };
     svg.addEventListener('pointerdown', (ev) => {
       svg.setPointerCapture(ev.pointerId);
       this.current.onPointerDown(this.world(ev), ev);
-    });
-    svg.addEventListener('pointermove', (ev) => this.current.onPointerMove(this.world(ev), ev));
+    }, sig);
+    svg.addEventListener('pointermove', (ev) => this.current.onPointerMove(this.world(ev), ev), sig);
     svg.addEventListener('pointerup', (ev) => {
       this.current.onPointerUp(this.world(ev), ev);
       svg.releasePointerCapture(ev.pointerId);
-    });
-    svg.addEventListener('dblclick', (ev) => this.current.onDoubleClick?.(this.world(ev), ev));
+    }, sig);
+    svg.addEventListener('dblclick', (ev) => this.current.onDoubleClick?.(this.world(ev), ev), sig);
   }
 
   private world(ev: { clientX: number; clientY: number }) {
@@ -1734,7 +1737,10 @@ Add methods to the class:
     host.appendChild(input);
     input.focus();
     input.select();
+    let done = false;
     const commit = (write: boolean) => {
+      if (done) return;
+      done = true;
       if (write) this.applyText(s.id, input.value);
       input.remove();
     };
@@ -1852,6 +1858,13 @@ In the constructor, after `this.bindPointerEvents();`, add:
 Add the method:
 
 ```ts
+  private listeners = new AbortController();
+
+  /** Detach all global (window) listeners this App registered. */
+  destroy(): void {
+    this.listeners.abort();
+  }
+
   private bindKeyboard(): void {
     window.addEventListener('keydown', (ev) => {
       const target = ev.target as HTMLElement | null;
@@ -1860,8 +1873,11 @@ Add the method:
         ev.preventDefault();
         this.deleteSelection();
       }
-    });
+    }, { signal: this.listeners.signal });
   }
+
+// NOTE: Tasks 12 (undo/redo) and 13 (space-pan) must register their window listeners
+// through `{ signal: this.listeners.signal }` so they are cleaned up by destroy().
 ```
 
 - [ ] **Step 4: Run the test to verify it passes**
@@ -2005,16 +2021,16 @@ export class History {
     const prev = this.undoStack.pop();
     if (!prev) return null;
     this.redoStack.push(this.present);
-    this.present = prev;
-    return cloneWorkspace(prev);
+    this.present = cloneWorkspace(prev);
+    return cloneWorkspace(this.present);
   }
 
   redo(): Workspace | null {
     const next = this.redoStack.pop();
     if (!next) return null;
     this.undoStack.push(this.present);
-    this.present = next;
-    return cloneWorkspace(next);
+    this.present = cloneWorkspace(next);
+    return cloneWorkspace(this.present);
   }
 
   canUndo(): boolean {
@@ -2055,13 +2071,15 @@ Replace `commit()`:
   }
 ```
 
-Add undo/redo:
+Add undo/redo (viewport is preserved — not undoable):
 
 ```ts
   undo(): void {
     const ws = this.history.undo();
     if (!ws) return;
+    const vp = { ...this.activeTab.viewport };   // keep the live camera
     this.workspace = ws;
+    this.activeTab.viewport = vp;
     this.selection.clear();
     this.render();
   }
@@ -2069,7 +2087,9 @@ Add undo/redo:
   redo(): void {
     const ws = this.history.redo();
     if (!ws) return;
+    const vp = { ...this.activeTab.viewport };   // keep the live camera
     this.workspace = ws;
+    this.activeTab.viewport = vp;
     this.selection.clear();
     this.render();
   }
@@ -2205,8 +2225,7 @@ Add methods to `App`:
 
   panBy(dx: number, dy: number): void {
     const vp = this.activeTab.viewport;
-    vp.panX += dx;
-    vp.panY += dy;
+    this.activeTab.viewport = { ...vp, panX: vp.panX + dx, panY: vp.panY + dy };
     this.render();
   }
 
@@ -2229,6 +2248,7 @@ In the constructor after `this.bindKeyboard();` add `this.bindViewport();` and i
 
   private bindViewport(): void {
     const svg = this.renderer.svg;
+    const sig = { signal: this.listeners.signal };
     svg.addEventListener('wheel', (ev) => {
       if (ev.ctrlKey || ev.metaKey) {
         ev.preventDefault();
@@ -2236,25 +2256,36 @@ In the constructor after `this.bindKeyboard();` add `this.bindViewport();` and i
         const factor = ev.deltaY < 0 ? 1.1 : 1 / 1.1;
         this.zoomBy(factor, ev.clientX - rect.left, ev.clientY - rect.top);
       }
-    }, { passive: false });
+    }, { ...sig, passive: false });
 
-    window.addEventListener('keydown', (ev) => { if (ev.code === 'Space') this.spaceDown = true; });
-    window.addEventListener('keyup', (ev) => { if (ev.code === 'Space') this.spaceDown = false; });
+    window.addEventListener('keydown', (ev) => {
+      const t = ev.target as HTMLElement | null;
+      if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA')) return;
+      if (ev.code === 'Space') { ev.preventDefault(); this.spaceDown = true; }
+    }, sig);
+    window.addEventListener('keyup', (ev) => { if (ev.code === 'Space') this.spaceDown = false; }, sig);
 
     svg.addEventListener('pointerdown', (ev) => {
       if (this.spaceDown || ev.button === 1) {
         this.panning = true;
         this.panLast = { x: ev.clientX, y: ev.clientY };
+        svg.setPointerCapture(ev.pointerId);
         ev.stopImmediatePropagation();
       }
-    }, true);
+    }, { ...sig, capture: true });
     svg.addEventListener('pointermove', (ev) => {
       if (!this.panning) return;
       this.panBy(ev.clientX - this.panLast.x, ev.clientY - this.panLast.y);
       this.panLast = { x: ev.clientX, y: ev.clientY };
       ev.stopImmediatePropagation();
-    }, true);
-    svg.addEventListener('pointerup', () => { this.panning = false; }, true);
+    }, { ...sig, capture: true });
+    svg.addEventListener('pointerup', (ev) => {
+      if (this.panning) {
+        this.panning = false;
+        svg.releasePointerCapture(ev.pointerId);
+        ev.stopImmediatePropagation();
+      }
+    }, { ...sig, capture: true });
   }
 ```
 
@@ -2399,7 +2430,7 @@ export class Autosave {
 
   schedule(ws: Workspace): void {
     if (this.timer) clearTimeout(this.timer);
-    this.timer = setTimeout(() => this.save(ws), DEBOUNCE_MS);
+    this.timer = setTimeout(() => { this.save(ws); this.timer = null; }, DEBOUNCE_MS);
   }
 }
 ```
@@ -2448,7 +2479,7 @@ Schedule autosave in `commit()` and after viewport changes. Update `commit()`:
   }
 ```
 
-Add `this.autosave.schedule(this.workspace);` at the end of `zoomBy`, `panBy`, and `resetView` (after their `this.render()`).
+Add `this.autosave.schedule(this.workspace);` at the end of `commit()` (already wired), `undo()`, `redo()`, `zoomBy`, `panBy`, and `resetView` (after their `this.render()`). Adding to `undo()`/`redo()` supersedes any stale debounce closure that was created before the undo/redo ran.
 
 - [ ] **Step 6: Load saved workspace in `src/main.ts`**
 
