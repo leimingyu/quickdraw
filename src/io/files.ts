@@ -117,9 +117,11 @@ export function exportTabSvg(app: App): void {
   showToast(`Exported "${filename}" — check your Downloads folder`);
 }
 
-/** Rasterize an SVG document string to a DPI-tagged PNG blob at EXPORT_DPI.
+/** Rasterize an SVG document string to a DPI-tagged PNG blob at EXPORT_DPI. When
+ *  `background` is given (e.g. '#ffffff'), it is painted as an opaque fill behind
+ *  the drawing so the PNG isn't transparent; omit it to keep the background clear.
  *  Rejects if the SVG can't be decoded or the canvas 2D context is unavailable. */
-export function svgToPngBlob(svg: string): Promise<Blob> {
+export function svgToPngBlob(svg: string, background?: string): Promise<Blob> {
   return new Promise((resolve, reject) => {
     const url = URL.createObjectURL(new Blob([svg], { type: 'image/svg+xml' }));
     const img = new Image();
@@ -128,9 +130,13 @@ export function svgToPngBlob(svg: string): Promise<Blob> {
       canvas.width = img.width * SCALE;
       canvas.height = img.height * SCALE;
       const ctx = canvas.getContext('2d');
-      URL.revokeObjectURL(url);
-      if (!ctx) { reject(new Error('canvas 2D context unavailable')); return; }
+      if (!ctx) { URL.revokeObjectURL(url); reject(new Error('canvas 2D context unavailable')); return; }
+      if (background) { // fill first so the drawing composites over an opaque background
+        ctx.fillStyle = background;
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+      }
       ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+      URL.revokeObjectURL(url); // revoke only AFTER drawing: SVG images rasterize at draw time
       canvas.toBlob((blob) => {
         if (!blob) { reject(new Error('PNG encoding failed')); return; }
         pngWithDpi(blob, EXPORT_DPI).then(resolve, reject);
@@ -170,9 +176,11 @@ export async function copyTabPng(app: App): Promise<void> {
   const scope = app.selection.size > 0 ? 'selection' : 'diagram';
   const svg = tabExportSvg(app);
   try {
+    // Paint a white background: a transparent PNG pastes as a blank/see-through figure
+    // in PowerPoint & Google Slides (they render clipboard transparency unreliably).
     // Hand the write a Promise for the blob so clipboard.write fires inside the user
     // gesture (Safari requires this); the rasterization resolves it a moment later.
-    await navigator.clipboard.write([new ClipboardItem({ 'image/png': svgToPngBlob(svg) })]);
+    await navigator.clipboard.write([new ClipboardItem({ 'image/png': svgToPngBlob(svg, '#ffffff') })]);
     showToast(`Copied ${scope} to clipboard — paste into your slides or doc`);
   } catch {
     showToast('Couldn\'t copy to the clipboard — use "Export as PNG" instead');
