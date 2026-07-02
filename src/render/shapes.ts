@@ -1,7 +1,9 @@
 import type { Shape } from '../model/types';
+import { DEFAULT_FONT_FAMILY } from '../model/document';
 
 const NS = 'http://www.w3.org/2000/svg';
 const ROUNDED_RADIUS = 12;
+const TEXT_PAD = 6; // inset from the shape edge for left/right-aligned text
 
 function applyStyle(el: SVGElement, s: Shape): void {
   el.setAttribute('fill', s.style.fill);
@@ -52,11 +54,23 @@ function primitive(s: Shape): SVGElement {
 
 function textEl(s: Shape): SVGTextElement {
   const t = document.createElementNS(NS, 'text');
-  t.setAttribute('x', String(s.x + s.w / 2));
+  const align = s.style.textAlign ?? 'center';
+  if (align === 'left') {
+    t.setAttribute('x', String(s.x + TEXT_PAD));
+    t.setAttribute('text-anchor', 'start');
+  } else if (align === 'right') {
+    t.setAttribute('x', String(s.x + s.w - TEXT_PAD));
+    t.setAttribute('text-anchor', 'end');
+  } else {
+    t.setAttribute('x', String(s.x + s.w / 2));
+    t.setAttribute('text-anchor', 'middle');
+  }
   t.setAttribute('y', String(s.y + s.h / 2));
-  t.setAttribute('text-anchor', 'middle');
   t.setAttribute('dominant-baseline', 'central');
   t.setAttribute('font-size', String(s.style.fontSize));
+  t.setAttribute('font-family', s.style.fontFamily ?? DEFAULT_FONT_FAMILY);
+  if (s.style.bold) t.setAttribute('font-weight', 'bold');
+  if (s.style.italic) t.setAttribute('font-style', 'italic');
   t.setAttribute('fill', s.style.fontColor);
   t.setAttribute('pointer-events', 'none');
   t.textContent = s.text!;

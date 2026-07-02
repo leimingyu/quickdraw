@@ -1,8 +1,20 @@
 import type { Connector, ConnectorStyle, Endpoint, Node, Shape, ShapeKind, ShapeStyle, Tab, Workspace } from './types';
 import { uid } from '../util/id';
 
+/** Curated font stacks for the typography control. Each ends in a generic family
+ *  so it still resolves (incl. when PNG export rasterizes the SVG) without web fonts. */
+export const FONT_STACKS = {
+  sans: "system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif",
+  serif: "Georgia, 'Times New Roman', Times, serif",
+  mono: "'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace",
+  cursive: "'Comic Sans MS', 'Segoe Script', cursive",
+} as const;
+
+export const DEFAULT_FONT_FAMILY = FONT_STACKS.sans;
+
 export const DEFAULT_STYLE: ShapeStyle = {
   fill: '#ffffff', stroke: '#1e1e1e', strokeWidth: 2, fontSize: 16, fontColor: '#1e1e1e',
+  fontFamily: DEFAULT_FONT_FAMILY, bold: false, italic: false, textAlign: 'center',
   dashed: false,
 };
 
@@ -154,7 +166,7 @@ export function ungroupNodes(tab: Tab, ids: Set<string>): void {
 
 export type StylePatch = Partial<ShapeStyle & ConnectorStyle>;
 
-const SHAPE_ONLY = new Set(['fill', 'fontSize', 'fontColor']);
+const SHAPE_ONLY = new Set(['fill', 'fontSize', 'fontColor', 'fontFamily', 'bold', 'italic', 'textAlign']);
 const CONNECTOR_ONLY = new Set(['arrowStart', 'arrowEnd', 'routing']);
 
 /** Apply a style patch to the selected nodes, routing each key by node kind. */

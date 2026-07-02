@@ -1,6 +1,14 @@
 import type { App } from '../app';
-import type { Node, Routing } from '../model/types';
-import { isShape, isConnector, type StylePatch } from '../model/document';
+import type { Node, Routing, TextAlign } from '../model/types';
+import { isShape, isConnector, FONT_STACKS, DEFAULT_FONT_FAMILY, type StylePatch } from '../model/document';
+
+/** Curated font families offered by the typography control (label, CSS stack). */
+const FONT_OPTIONS: [string, string][] = [
+  ['Sans', FONT_STACKS.sans],
+  ['Serif', FONT_STACKS.serif],
+  ['Mono', FONT_STACKS.mono],
+  ['Cursive', FONT_STACKS.cursive],
+];
 
 export function mountProperties(app: App, container: HTMLElement): { update: () => void } {
   const dock = document.createElement('div');
@@ -41,6 +49,10 @@ export function mountProperties(app: App, container: HTMLElement): { update: () 
       dock.appendChild(colorRow('Fill', 'fill', firstShape.style.fill, (v) => ({ fill: v })));
       dock.appendChild(numberRow('Font', 'fontSize', firstShape.style.fontSize, 4, (v) => ({ fontSize: v })));
       dock.appendChild(colorRow('Text', 'fontColor', firstShape.style.fontColor, (v) => ({ fontColor: v })));
+      dock.appendChild(selectRow('Family', 'fontFamily', firstShape.style.fontFamily ?? DEFAULT_FONT_FAMILY, FONT_OPTIONS, (v) => ({ fontFamily: v })));
+      dock.appendChild(toggleRow('Bold', 'bold', !!firstShape.style.bold, (v) => ({ bold: v })));
+      dock.appendChild(toggleRow('Italic', 'italic', !!firstShape.style.italic, (v) => ({ italic: v })));
+      dock.appendChild(alignRow(firstShape.style.textAlign ?? 'center'));
       dock.appendChild(rotationRow());
     }
     if (firstConn) {
@@ -106,6 +118,46 @@ export function mountProperties(app: App, container: HTMLElement): { update: () 
       b.addEventListener('click', () => {
         app.connectorRouting = kind; // also the default for the next drawn connector
         app.restyle({ routing: kind });
+        app.commitStyle();
+      });
+      seg.appendChild(b);
+    }
+    row.appendChild(seg);
+    return row;
+  }
+
+  function selectRow(label: string, prop: string, value: string, options: [string, string][], make: (v: string) => StylePatch): HTMLElement {
+    const row = labeledRow(label);
+    const select = document.createElement('select');
+    select.dataset.prop = prop;
+    for (const [optLabel, optValue] of options) {
+      const opt = document.createElement('option');
+      opt.value = optValue;
+      opt.textContent = optLabel;
+      if (optValue === value) opt.selected = true;
+      select.appendChild(opt);
+    }
+    // A select change is a single discrete gesture: apply live, then commit once.
+    select.addEventListener('change', () => {
+      app.restyle(make(select.value));
+      app.commitStyle();
+    });
+    row.appendChild(select);
+    return row;
+  }
+
+  function alignRow(current: TextAlign): HTMLElement {
+    const row = labeledRow('Align');
+    const seg = document.createElement('div');
+    seg.className = 'seg';
+    const opts: [TextAlign, string][] = [['left', 'Left'], ['center', 'Center'], ['right', 'Right']];
+    for (const [val, label] of opts) {
+      const b = document.createElement('button');
+      b.textContent = label;
+      b.dataset.align = val;
+      b.classList.toggle('active', current === val);
+      b.addEventListener('click', () => {
+        app.restyle({ textAlign: val });
         app.commitStyle();
       });
       seg.appendChild(b);

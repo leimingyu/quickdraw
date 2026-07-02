@@ -84,6 +84,57 @@ describe('properties panel', () => {
     expect(commitSpy).toHaveBeenCalled();
   });
 
+  it('shows typography controls (font family, bold, italic, align) for a shape', () => {
+    const { a } = connected();
+    app.selection = new Set([a.id]);
+    panel.update();
+    expect(q('[data-prop="fontFamily"]')).toBeTruthy();
+    expect(q('[data-prop="bold"]')).toBeTruthy();
+    expect(q('[data-prop="italic"]')).toBeTruthy();
+    expect(dock().querySelector('[data-align="center"]')).toBeTruthy();
+  });
+
+  it('does not show typography controls for a connector', () => {
+    const { c } = connected();
+    app.selection = new Set([c.id]);
+    panel.update();
+    expect(dock().querySelector('[data-prop="fontFamily"]')).toBeNull();
+    expect(dock().querySelector('[data-prop="bold"]')).toBeNull();
+    expect(dock().querySelector('[data-align="center"]')).toBeNull();
+  });
+
+  it('toggling bold sets it on the selected shape and commits', () => {
+    const { a } = connected();
+    app.selection = new Set([a.id]);
+    panel.update();
+    const commitSpy = vi.spyOn(app, 'commitStyle');
+    q('[data-prop="bold"]').dispatchEvent(new Event('click'));
+    expect(a.style.bold).toBe(true);
+    expect(commitSpy).toHaveBeenCalled();
+  });
+
+  it('choosing an alignment updates every selected shape', () => {
+    const { a, b } = connected();
+    app.selection = new Set([a.id, b.id]);
+    panel.update();
+    (dock().querySelector('[data-align="right"]') as HTMLElement).dispatchEvent(new Event('click'));
+    expect(a.style.textAlign).toBe('right');
+    expect(b.style.textAlign).toBe('right');
+  });
+
+  it('selecting a font family updates the selected shape and commits', () => {
+    const { a } = connected();
+    app.selection = new Set([a.id]);
+    panel.update();
+    const commitSpy = vi.spyOn(app, 'commitStyle');
+    const select = dock().querySelector('[data-prop="fontFamily"]') as HTMLSelectElement;
+    const chosen = select.options[1].value; // second curated font
+    select.value = chosen;
+    select.dispatchEvent(new Event('change'));
+    expect(a.style.fontFamily).toBe(chosen);
+    expect(commitSpy).toHaveBeenCalled();
+  });
+
   it('toggling dashed sets it on the selection', () => {
     const { a } = connected();
     app.selection = new Set([a.id]);

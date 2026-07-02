@@ -29,6 +29,17 @@ describe('restyleNodes', () => {
     expect(c.style.arrowEnd).toBe(false);     // connector got arrowEnd
   });
 
+  it('routes typography keys (fontFamily/bold/italic/textAlign) to shapes only', () => {
+    const { tab, a, c } = mixedTab();
+    restyleNodes(tab, new Set([a.id, c.id]), { fontFamily: 'Georgia, serif', bold: true, italic: true, textAlign: 'left' });
+    expect(a.style.fontFamily).toBe('Georgia, serif');
+    expect(a.style.bold).toBe(true);
+    expect(a.style.italic).toBe(true);
+    expect(a.style.textAlign).toBe('left');
+    expect('fontFamily' in c.style).toBe(false); // connector untouched
+    expect('bold' in c.style).toBe(false);
+  });
+
   it('sets a new optional field (dashed) even on a node that lacked it', () => {
     const { tab, a } = mixedTab();
     delete a.style.dashed; // simulate an old node
