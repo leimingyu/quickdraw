@@ -12,9 +12,12 @@ body { font: 14px system-ui, sans-serif; }
   background: #fff; border: 1px solid #ccc; border-radius: 6px; padding: 4px;
   box-shadow: 0 8px 24px rgba(0,0,0,0.16); z-index: 100; }
 .menu.open .menu-items { display: block; }
-.menu-item { display: block; width: 100%; text-align: left; padding: 6px 12px; background: none;
-  border: none; font: inherit; cursor: pointer; border-radius: 4px; white-space: nowrap; }
+.menu-item { display: flex; align-items: center; justify-content: space-between; gap: 24px;
+  width: 100%; text-align: left; padding: 6px 12px; background: none; border: none; font: inherit;
+  cursor: pointer; border-radius: 4px; white-space: nowrap; }
 .menu-item:hover { background: #eff6ff; }
+.menu-key { color: #9aa0a6; font-size: 12px; }
+.menu-item:hover .menu-key { color: #5b6168; }
 .menu-item.active { background: #3b82f6; color: #fff; }
 .menu-sep { height: 1px; background: #eaeaea; margin: 4px 6px; }
 .palette-host { flex: 0 0 auto; }

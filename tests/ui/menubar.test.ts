@@ -20,7 +20,8 @@ afterEach(() => app.destroy());
 const title = (name: string) =>
   [...host.querySelectorAll<HTMLButtonElement>('.menu-title')].find((b) => b.textContent === name)!;
 const item = (label: string) =>
-  [...host.querySelectorAll<HTMLButtonElement>('.menu-item')].find((b) => b.textContent === label)!;
+  [...host.querySelectorAll<HTMLButtonElement>('.menu-item')]
+    .find((b) => b.querySelector('span')?.textContent === label)!; // first span = the label
 
 describe('menu bar', () => {
   it('renders File / Edit / View menus (tools live in the palette)', () => {
@@ -47,5 +48,12 @@ describe('menu bar', () => {
     title('View').click();
     item('Reset to 100%').click();
     expect(app.activeTab.viewport.zoom).toBe(1);
+  });
+
+  it('shows a platform-appropriate keyboard hint on shortcut items', () => {
+    title('Edit').click();
+    const hint = item('Undo').querySelector('.menu-key');
+    expect(hint).not.toBeNull();
+    expect(hint!.textContent).toMatch(/^(⌘Z|Ctrl\+Z)$/); // ⌘ on Mac, Ctrl on Windows/Linux
   });
 });

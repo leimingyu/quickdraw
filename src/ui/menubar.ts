@@ -1,7 +1,8 @@
 import type { App } from '../app';
 import { saveWorkspace, openWorkspace, exportTabSvg, exportTabPng } from '../io/files';
+import { isMac, formatShortcut } from './platform';
 
-type Item = { label: string; run: () => void } | 'separator';
+type Item = { label: string; run: () => void; keys?: string } | 'separator';
 interface Menu { title: string; items: Item[] }
 
 /**
@@ -16,7 +17,7 @@ export function mountMenuBar(app: App, container: HTMLElement): void {
     {
       title: 'File',
       items: [
-        { label: 'Save…', run: () => saveWorkspace(app) },
+        { label: 'Save…', run: () => saveWorkspace(app), keys: 'mod+S' },
         { label: 'Open…', run: () => openWorkspace(app) },
         'separator',
         { label: 'Export as SVG', run: () => exportTabSvg(app) },
@@ -28,19 +29,19 @@ export function mountMenuBar(app: App, container: HTMLElement): void {
     {
       title: 'Edit',
       items: [
-        { label: 'Undo', run: () => app.undo() },
-        { label: 'Redo', run: () => app.redo() },
+        { label: 'Undo', run: () => app.undo(), keys: 'mod+Z' },
+        { label: 'Redo', run: () => app.redo(), keys: 'mod+shift+Z' },
         'separator',
-        { label: 'Cut', run: () => app.cut() },
-        { label: 'Copy', run: () => app.copySelection() },
-        { label: 'Paste', run: () => app.paste() },
-        { label: 'Duplicate', run: () => app.duplicate() },
+        { label: 'Cut', run: () => app.cut(), keys: 'mod+X' },
+        { label: 'Copy', run: () => app.copySelection(), keys: 'mod+C' },
+        { label: 'Paste', run: () => app.paste(), keys: 'mod+V' },
+        { label: 'Duplicate', run: () => app.duplicate(), keys: 'mod+D' },
         'separator',
-        { label: 'Delete', run: () => app.deleteSelection() },
-        { label: 'Select all', run: () => app.selectAll() },
+        { label: 'Delete', run: () => app.deleteSelection(), keys: 'Delete' },
+        { label: 'Select all', run: () => app.selectAll(), keys: 'mod+A' },
         'separator',
-        { label: 'Group', run: () => app.group() },
-        { label: 'Ungroup', run: () => app.ungroup() },
+        { label: 'Group', run: () => app.group(), keys: 'mod+G' },
+        { label: 'Ungroup', run: () => app.ungroup(), keys: 'mod+shift+G' },
       ],
     },
     {
@@ -53,6 +54,7 @@ export function mountMenuBar(app: App, container: HTMLElement): void {
     },
   ];
 
+  const mac = isMac(); // shortcut hints show ⌘ on Mac, Ctrl on Windows/Linux
   let openWrap: HTMLElement | null = null;
   const closeAll = () => { if (openWrap) { openWrap.classList.remove('open'); openWrap = null; } };
   const open = (wrap: HTMLElement) => { closeAll(); wrap.classList.add('open'); openWrap = wrap; };
@@ -75,7 +77,15 @@ export function mountMenuBar(app: App, container: HTMLElement): void {
       }
       const b = document.createElement('button');
       b.className = 'menu-item';
-      b.textContent = it.label;
+      const label = document.createElement('span');
+      label.textContent = it.label;
+      b.appendChild(label);
+      if (it.keys) {
+        const hint = document.createElement('span');
+        hint.className = 'menu-key';
+        hint.textContent = formatShortcut(it.keys, mac);
+        b.appendChild(hint);
+      }
       b.addEventListener('click', () => { it.run(); closeAll(); });
       items.appendChild(b);
     }
