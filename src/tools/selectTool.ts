@@ -1,5 +1,5 @@
 import type { App } from '../app';
-import type { Node, Shape, Connector } from '../model/types';
+import type { Node, Shape, Connector, Endpoint } from '../model/types';
 import { hitTest, shapeInRect, resizeBox, resizeRotatedBox, shapeHandlePositions, rotationHandlePos, angleFromCenter, shapeCenter, ROTATION_KNOB_DIST, type Box, type Handle, type Point } from '../model/geometry';
 import { groupMembers, expandToGroups, isShape, isConnector } from '../model/document';
 import { computeSnap } from '../model/snapping';
@@ -146,12 +146,13 @@ export class SelectTool implements Tool {
       this.app.activeTab.nodes.filter(isShape).filter((s) => shapeInRect(s, box)).map((s) => s.id),
     );
     const sel = expandToGroups(this.app.activeTab, shapeIds);
+    // A connector's end is "in" the marquee if it attaches to a selected shape, or —
+    // for a free (unattached) end — if its point falls inside the box. Both ends in
+    // → select the connector, so a marquee grabs free connectors it encloses too.
+    const inBox = (p: Point) => p.x >= box.x && p.x <= box.x + box.w && p.y >= box.y && p.y <= box.y + box.h;
+    const endIn = (e: Endpoint) => ('nodeId' in e ? sel.has(e.nodeId) : inBox(e));
     for (const n of this.app.activeTab.nodes) {
-      if (isConnector(n)) {
-        const fromIn = 'nodeId' in n.from ? sel.has(n.from.nodeId) : false;
-        const toIn = 'nodeId' in n.to ? sel.has(n.to.nodeId) : false;
-        if (fromIn && toIn) sel.add(n.id);
-      }
+      if (isConnector(n) && endIn(n.from) && endIn(n.to)) sel.add(n.id);
     }
     this.app.selection = sel;
   }

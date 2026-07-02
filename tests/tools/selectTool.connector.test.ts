@@ -59,4 +59,22 @@ describe('SelectTool with connectors', () => {
     expect(app.selection.has(a.id)).toBe(true);
     expect(app.selection.has(c.id)).toBe(false);
   });
+
+  it('marquee enclosing a FREE (unattached) connector selects it', () => {
+    const c = createConnector({ x: 150, y: 40 }, { x: 250, y: 40 }); // both ends free
+    addNode(app.activeTab, c);
+    tool.onPointerDown({ x: 100, y: 0 }, { shiftKey: false } as PointerEvent);
+    tool.onPointerMove({ x: 300, y: 100 }, {} as PointerEvent); // box covers both free ends
+    tool.onPointerUp({ x: 300, y: 100 }, {} as PointerEvent);
+    expect(app.selection.has(c.id)).toBe(true);
+  });
+
+  it('marquee covering only one end of a free connector does NOT select it', () => {
+    const c = createConnector({ x: 150, y: 40 }, { x: 250, y: 40 });
+    addNode(app.activeTab, c);
+    tool.onPointerDown({ x: 100, y: 0 }, { shiftKey: false } as PointerEvent);
+    tool.onPointerMove({ x: 200, y: 100 }, {} as PointerEvent); // covers (150,40) but not (250,40)
+    tool.onPointerUp({ x: 200, y: 100 }, {} as PointerEvent);
+    expect(app.selection.has(c.id)).toBe(false);
+  });
 });
