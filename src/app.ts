@@ -248,6 +248,20 @@ export class App {
     this.commit();
   }
 
+  /** Reset every selected shape's rotation back to 0° (the landscape default).
+   *  Undoable; records no history entry when nothing in the selection is rotated. */
+  resetRotation(): void {
+    if (this.selection.size === 0) return;
+    let changed = false;
+    for (const n of this.activeTab.nodes) {
+      if (this.selection.has(n.id) && isShape(n) && n.rotation) {
+        n.rotation = 0;
+        changed = true;
+      }
+    }
+    if (changed) this.commit();
+  }
+
   /** Select every node in the active tab. Not undoable (selection change only). */
   selectAll(): void {
     this.selection = new Set(this.activeTab.nodes.map((n) => n.id));

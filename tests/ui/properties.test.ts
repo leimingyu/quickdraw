@@ -100,6 +100,25 @@ describe('properties panel', () => {
     expect(app.activeTab.nodes[app.activeTab.nodes.length - 1].id).toBe(a.id);
   });
 
+  it('shows a rotation Reset button for a shape but not a connector', () => {
+    const { a, c } = connected();
+    app.selection = new Set([a.id]);
+    panel.update();
+    expect(dock().querySelector('[data-action="reset-rotation"]')).toBeTruthy();
+    app.selection = new Set([c.id]);
+    panel.update();
+    expect(dock().querySelector('[data-action="reset-rotation"]')).toBeNull();
+  });
+
+  it('rotation Reset button sets the selected shape back to 0°', () => {
+    const { a } = connected();
+    a.rotation = 72;
+    app.selection = new Set([a.id]);
+    panel.update();
+    (dock().querySelector('[data-action="reset-rotation"]') as HTMLElement).dispatchEvent(new Event('click'));
+    expect(a.rotation).toBe(0);
+  });
+
   it('keeps a focused input through a same-selection update (signature gate)', () => {
     const { a } = connected();
     app.selection = new Set([a.id]);
