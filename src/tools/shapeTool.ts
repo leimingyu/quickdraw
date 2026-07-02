@@ -24,8 +24,9 @@ function normalize(a: Point, b: Point): Box {
  * Places shapes by drag-to-draw (MS Paint style): press to start, drag to
  * rubber-band a live preview from the start corner, release to create the
  * shape at that size. A click with no meaningful drag drops a default-sized
- * shape centered on the click. The tool stays active after creating so you can
- * keep drawing (press Esc, or pick Select, to switch back).
+ * shape centered on the click. After creating, the tool hands off to Select
+ * (like the connector tool) so the new shape can be moved/resized/edited right
+ * away — pick the tool again to draw another.
  *
  * Pressing on an EXISTING shape moves it (and its group) instead of drawing, so
  * you don't have to switch to the Select tool just to nudge something; a new
@@ -88,15 +89,13 @@ export class ShapeTool implements Tool {
       }
       this.app.selection = new Set([this.shape.id]);
       this.app.commit();
-      const placedText = this.kind === 'text';
       this.start = null;
       this.shape = null;
-      // Text is a place-one-then-work-with-it tool (unlike shapes you stamp in a
-      // row): hand off to Select so the new box's resize handles and rotation knob
-      // are live immediately — otherwise pressing the dashed boundary would just
-      // move it (or draw another box) instead of resizing. Geometric tools stay
-      // active for continuous drawing; press Esc (or click Select) to switch back.
-      if (placedText) this.app.setTool('select');
+      // Hand off to Select after placing any shape, so the new shape's move/resize
+      // handles (and, for text, the rotation knob) are live immediately instead of
+      // the tool staying in draw mode. Matches the connector tool; pick the shape
+      // tool again to draw another.
+      this.app.setTool('select');
       return;
     }
     this.start = null;
