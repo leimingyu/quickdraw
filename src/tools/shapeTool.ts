@@ -88,10 +88,18 @@ export class ShapeTool implements Tool {
       }
       this.app.selection = new Set([this.shape.id]);
       this.app.commit();
+      const placedText = this.kind === 'text';
+      this.start = null;
+      this.shape = null;
+      // Text is a place-one-then-work-with-it tool (unlike shapes you stamp in a
+      // row): hand off to Select so the new box's resize handles and rotation knob
+      // are live immediately — otherwise pressing the dashed boundary would just
+      // move it (or draw another box) instead of resizing. Geometric tools stay
+      // active for continuous drawing; press Esc (or click Select) to switch back.
+      if (placedText) this.app.setTool('select');
+      return;
     }
     this.start = null;
     this.shape = null;
-    // Stay on the same shape tool so you can keep drawing. Press Esc (or click
-    // Select) to switch back to the select tool.
   }
 }
