@@ -6,9 +6,17 @@ This repository currently contains **Phase 1 — the core canvas**.
 
 ---
 
-## ⚠️ Run it, don't open it
+## Use it — no install (portable)
 
-QuickDraw is a Vite app. **Do not** double-click `index.html` or open it via `file://` — you'll get a **blank page**. The entry `index.html` points at `/src/main.ts` (TypeScript), which only a build tool can serve and transpile. Use the dev server (or a production build) instead:
+Just want to draw? Grab **[`quickdraw.html`](quickdraw.html)** and **double-click it.** It's a single self-contained file — all JS and CSS inlined, no external requests — that runs in any modern browser on **Windows, macOS, or Linux** with **no install, no server, no npm**. Copy it to a USB stick, email it, drop it in any folder.
+
+> Opened this way (`file://`), Save / Open / Export use the browser's normal download & file-picker instead of a native "Save As" folder dialog — everything still works. For the full folder-picker experience, serve it (dev server or a static host).
+
+Regenerate it after code changes with `npm run build:single` (writes `quickdraw.html`).
+
+## Run from source (for development)
+
+The dev entry `index.html` points at `/src/main.ts` (TypeScript), so **don't** double-click *it* — that one needs a build tool. Use the dev server (or a production build):
 
 ```bash
 npm install      # first time only
