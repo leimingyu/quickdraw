@@ -117,27 +117,64 @@ export function exportTabSvg(app: App): void {
   showToast(`Exported "${filename}" — check your Downloads folder`);
 }
 
+/** Rasterize an SVG document string to a DPI-tagged PNG blob at EXPORT_DPI.
+ *  Rejects if the SVG can't be decoded or the canvas 2D context is unavailable. */
+export function svgToPngBlob(svg: string): Promise<Blob> {
+  return new Promise((resolve, reject) => {
+    const url = URL.createObjectURL(new Blob([svg], { type: 'image/svg+xml' }));
+    const img = new Image();
+    img.onload = () => {
+      const canvas = document.createElement('canvas');
+      canvas.width = img.width * SCALE;
+      canvas.height = img.height * SCALE;
+      const ctx = canvas.getContext('2d');
+      URL.revokeObjectURL(url);
+      if (!ctx) { reject(new Error('canvas 2D context unavailable')); return; }
+      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+      canvas.toBlob((blob) => {
+        if (!blob) { reject(new Error('PNG encoding failed')); return; }
+        pngWithDpi(blob, EXPORT_DPI).then(resolve, reject);
+      }, 'image/png');
+    };
+    img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('SVG could not be decoded')); };
+    img.src = url;
+  });
+}
+
 export function exportTabPng(app: App): void {
   const filename = exportFileName(app.activeTab.name, 'png');
-  const svg = tabToSvgString(app.activeTab);
-  const url = URL.createObjectURL(new Blob([svg], { type: 'image/svg+xml' }));
-  const img = new Image();
-  img.onload = () => {
-    const canvas = document.createElement('canvas');
-    canvas.width = img.width * SCALE;
-    canvas.height = img.height * SCALE;
-    const ctx = canvas.getContext('2d');
-    URL.revokeObjectURL(url);
-    if (!ctx) return; // canvas unavailable — nothing to export
-    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-    canvas.toBlob((blob) => {
-      if (!blob) return;
-      void pngWithDpi(blob, EXPORT_DPI).then((tagged) => {
-        downloadBlob(tagged, filename);
-        showToast(`Exported "${filename}" (${EXPORT_DPI} DPI) — check your Downloads folder`);
-      });
-    }, 'image/png');
-  };
-  img.onerror = () => URL.revokeObjectURL(url); // don't leak the blob URL if the SVG can't be decoded
-  img.src = url;
+  void svgToPngBlob(tabToSvgString(app.activeTab)).then((blob) => {
+    downloadBlob(blob, filename);
+    showToast(`Exported "${filename}" (${EXPORT_DPI} DPI) — check your Downloads folder`);
+  }, () => {}); // canvas/SVG unavailable — nothing to export (matches prior silent no-op)
+}
+
+/** The SVG document to export or copy as an image: just the selected nodes, cropped
+ *  to their bounds, when there's a selection ("copy selection only"); otherwise the
+ *  whole diagram. */
+export function tabExportSvg(app: App): string {
+  const tab = app.activeTab;
+  if (app.selection.size === 0) return tabToSvgString(tab);
+  const nodes = tab.nodes.filter((n) => app.selection.has(n.id));
+  return tabToSvgString({ ...tab, nodes });
+}
+
+/** Copy the diagram — or just the selection, if any — to the OS clipboard as a PNG,
+ *  so it can be pasted straight into slides, docs, or chat. No modal beforehand: a
+ *  picker/alert would consume the click's user activation and make the write fail. */
+export async function copyTabPng(app: App): Promise<void> {
+  if (typeof ClipboardItem === 'undefined' || !navigator.clipboard?.write) {
+    showToast('Copying images to the clipboard isn\'t supported here — use "Export as PNG" instead');
+    return;
+  }
+  const scope = app.selection.size > 0 ? 'selection' : 'diagram';
+  const svg = tabExportSvg(app);
+  try {
+    // Hand the write a Promise for the blob so clipboard.write fires inside the user
+    // gesture (Safari requires this); the rasterization resolves it a moment later.
+    await navigator.clipboard.write([new ClipboardItem({ 'image/png': svgToPngBlob(svg) })]);
+    showToast(`Copied ${scope} to clipboard — paste into your slides or doc`);
+  } catch {
+    showToast('Couldn\'t copy to the clipboard — use "Export as PNG" instead');
+  }
 }

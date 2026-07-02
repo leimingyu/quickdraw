@@ -1,7 +1,7 @@
 import { App } from './app';
 import { mountMenuBar } from './ui/menubar';
 import { mountToolPalette } from './ui/toolPalette';
-import { saveWorkspace } from './io/files';
+import { saveWorkspace, copyTabPng } from './io/files';
 import { mountProperties } from './ui/properties';
 import { mountTabs } from './ui/tabs';
 import { ShapeTool } from './tools/shapeTool';
@@ -42,5 +42,6 @@ const tabs = mountTabs(app, tabStripHost);
 const panel = mountProperties(app, propsHost);
 app.onRender = () => { panel.update(); tabs.update(); palette.syncActive(); };
 app.onSave = () => saveWorkspace(app);
+app.onCopyImage = () => void copyTabPng(app);
 
 app.render();
