@@ -11,10 +11,10 @@ beforeEach(() => {
 });
 afterEach(() => app.destroy());
 
-const editor = () => document.querySelector('input.text-editor') as HTMLInputElement | null;
+const editor = () => document.querySelector('textarea.text-editor') as HTMLTextAreaElement | null;
 
 describe('App.editText', () => {
-  it('opens an editor seeded with the initial character and selects the shape', () => {
+  it('opens a textarea editor seeded with the initial character and selects the shape', () => {
     const s = createShape('rect', 0, 0, 100, 100);
     addNode(app.activeTab, s);
     app.editText(s, 'H');
@@ -42,6 +42,30 @@ describe('App.editText', () => {
     expect(s.text).toBe('Label');
     expect(spy).toHaveBeenCalledTimes(1);
     expect(editor()).toBeNull();
+  });
+
+  it('Shift+Enter inserts a newline instead of committing (editor stays open)', () => {
+    const s = createShape('rect', 0, 0, 100, 100);
+    addNode(app.activeTab, s);
+    const spy = vi.spyOn(app, 'commit');
+    app.editText(s);
+    const input = editor()!;
+    input.value = 'first';
+    const ev = new KeyboardEvent('keydown', { key: 'Enter', shiftKey: true, cancelable: true });
+    input.dispatchEvent(ev);
+    expect(ev.defaultPrevented).toBe(false); // the textarea keeps its native newline behavior
+    expect(spy).not.toHaveBeenCalled();
+    expect(editor()).not.toBeNull(); // still editing
+  });
+
+  it('commits a multi-line value on Enter', () => {
+    const s = createShape('rect', 0, 0, 100, 100);
+    addNode(app.activeTab, s);
+    app.editText(s);
+    const input = editor()!;
+    input.value = 'line one\nline two';
+    input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter' }));
+    expect(s.text).toBe('line one\nline two');
   });
 
   it('Escape cancels without writing, even if a blur follows', () => {
@@ -76,12 +100,15 @@ describe('App.editText', () => {
     expect(input.selectionEnd).toBe(5);
   });
 
-  it('centers the editor vertically in screen space (offset not scaled by zoom)', () => {
+  it('overlays the shape box in screen space (origin + size scaled by zoom)', () => {
     const s = createShape('rect', 0, 0, 100, 100);
     addNode(app.activeTab, s);
     app.activeTab.viewport = { panX: 0, panY: 0, zoom: 2 };
     app.editText(s);
-    // center of shape y = 50; screen = 50*2 = 100; minus 12px half-height = 88
-    expect(editor()!.style.top).toBe('88px');
+    const input = editor()!;
+    expect(input.style.left).toBe('0px');
+    expect(input.style.top).toBe('0px');
+    expect(input.style.width).toBe('200px'); // 100 * 2
+    expect(input.style.height).toBe('200px'); // 100 * 2
   });
 });

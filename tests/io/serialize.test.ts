@@ -24,6 +24,15 @@ describe('serializeWorkspace / deserializeWorkspace', () => {
     expect(deserializeWorkspace(serializeWorkspace(ws))).toEqual(ws);
   });
 
+  it('round-trips multi-line shape text (embedded newlines)', () => {
+    const ws = createWorkspace();
+    const s = createShape('rect', 0, 0, 100, 60);
+    s.text = 'line one\nline two\n\nline four';
+    addNode(ws.tabs[0], s);
+    const restored = deserializeWorkspace(serializeWorkspace(ws));
+    expect((restored.tabs[0].nodes[0] as typeof s).text).toBe('line one\nline two\n\nline four');
+  });
+
   it('round-trips a pinned connector anchor', () => {
     const ws = createWorkspace();
     const a = createShape('rect', 0, 0, 50, 50);

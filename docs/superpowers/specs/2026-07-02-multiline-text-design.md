@@ -72,11 +72,13 @@ query `<text>` stay green. Its **content** becomes one `<tspan>` per visual line
   than `maxW` is placed on its own line (no mid-word breaking). `maxW ≤ 0` or a
   non-positive measure ⇒ no wrapping (one line per paragraph). This keeps the algorithm
   deterministic and independent of the DOM.
-- **`measure`** — `makeMeasurer(style)` returns a text-width function: use an offscreen
-  `canvas.getContext('2d').measureText` when available (accurate in the browser), else fall
-  back to a deterministic estimator `≈ 0.6·fontSize` per char (`×1.05` when bold). jsdom has
-  no canvas 2d context, so tests deterministically exercise the estimator path; the browser
-  gets pixel-accurate wrapping. Guarded with try/catch + `> 0` check.
+- **`measure`** — `makeMeasurer(style)` returns a pure text-width estimator: `≈ 0.6·fontSize`
+  per char (`×1.05` when bold). It deliberately errs generous so wrapped text stays *inside*
+  the box rather than overflowing, and — being pure arithmetic with no canvas/DOM measurement
+  — behaves identically in the browser and under jsdom, so tests exercise the exact production
+  wrap path. (A canvas `measureText` path was prototyped but dropped: it produced jsdom
+  "not-implemented" console noise and made in-browser wrapping diverge from what tests verify;
+  swapping in glyph-accurate metrics later is a localized change behind this one seam.)
 - **Vertical centering:** `lineHeight = 1.2·fontSize`; the block is centered on the shape
   center. First `<tspan>` gets `dy = −(n−1)/2 · lineHeight`; each subsequent `<tspan>` gets
   `dy = lineHeight`. Every `<tspan>` repeats the anchor `x` so lines don't drift under

@@ -29,6 +29,11 @@ body { font: 14px system-ui, sans-serif; }
 .tool-btn:hover { background: #eef2ff; }
 .tool-btn.active { background: #1e1e1e; color: #fff; border-color: #1e1e1e; }
 .canvas-host { flex: 1; min-height: 0; }
+/* Inline shape-label editor: a multi-line textarea overlaying the shape box. */
+.text-editor { box-sizing: border-box; margin: 0; padding: 2px 4px; border: 1px solid #3b82f6;
+  border-radius: 2px; background: rgba(255,255,255,0.92); color: #1e1e1e;
+  font: inherit; text-align: center; line-height: 1.2; resize: none; overflow: hidden;
+  outline: none; z-index: 10; }
 .app-body { display: flex; flex: 1; min-height: 0; }
 .canvas-host { flex: 1; min-width: 0; }
 .props-host { flex: 0 0 auto; }

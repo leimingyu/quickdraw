@@ -191,45 +191,49 @@ export class App {
   }
 
   /** Open the inline text editor over a shape (any tool). Seeds with `initial` if given,
-   *  else the shape's existing text. Enter/blur commit, Escape cancels; idempotent. */
+   *  else the shape's existing text. The editor is a multi-line `<textarea>` overlaying the
+   *  shape box: Enter commits, Shift+Enter inserts a newline, Escape cancels, blur commits;
+   *  idempotent. */
   editText(shape: Shape, initial?: string): void {
     const host = this.renderer.svg.parentElement;
     if (!host) return; // no-op cleanly if unmounted, before touching any state
-    host.querySelector('input.text-editor')?.remove(); // flush any open editor first
+    host.querySelector('textarea.text-editor')?.remove(); // flush any open editor first
     this.selection = new Set([shape.id]);
     this.render();
-    const input = document.createElement('input');
-    input.className = 'text-editor';
-    input.value = initial !== undefined ? initial : shape.text ?? '';
+    const editor = document.createElement('textarea');
+    editor.className = 'text-editor';
+    editor.value = initial !== undefined ? initial : shape.text ?? '';
     const vp = this.activeTab.viewport;
-    input.style.position = 'absolute';
-    input.style.left = `${vp.panX + shape.x * vp.zoom}px`;
-    input.style.top = `${vp.panY + (shape.y + shape.h / 2) * vp.zoom - 12}px`;
-    input.style.width = `${shape.w * vp.zoom}px`;
+    editor.style.position = 'absolute';
+    editor.style.left = `${vp.panX + shape.x * vp.zoom}px`;
+    editor.style.top = `${vp.panY + shape.y * vp.zoom}px`;
+    editor.style.width = `${shape.w * vp.zoom}px`;
+    editor.style.height = `${shape.h * vp.zoom}px`;
     host.style.position = 'relative';
-    host.appendChild(input);
-    input.focus();
+    host.appendChild(editor);
+    editor.focus();
     if (initial !== undefined) {
-      const end = input.value.length;
-      input.setSelectionRange(end, end);
+      const end = editor.value.length;
+      editor.setSelectionRange(end, end);
     } else {
-      input.select();
+      editor.select();
     }
     let done = false;
     const commit = (write: boolean) => {
       if (done) return;
       done = true;
       if (write) {
-        shape.text = input.value;
+        shape.text = editor.value;
         this.commit();
       }
-      input.remove();
+      editor.remove();
     };
-    input.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter') commit(true);
+    editor.addEventListener('keydown', (e) => {
+      // Enter commits; Shift+Enter falls through to the textarea's native newline.
+      if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); commit(true); }
       else if (e.key === 'Escape') commit(false);
     });
-    input.addEventListener('blur', () => commit(true));
+    editor.addEventListener('blur', () => commit(true));
   }
 
   bringToFront(): void {
