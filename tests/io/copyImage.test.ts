@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { App } from '../../src/app';
 import { tabExportSvg, copyTabPng } from '../../src/io/files';
 import { EXPORT_PADDING } from '../../src/render/exportSvg';
-import { addNode, createShape } from '../../src/model/document';
+import { addNode, createShape, createConnector } from '../../src/model/document';
 
 const P = EXPORT_PADDING;
 let app: App;
@@ -34,6 +34,38 @@ describe('tabExportSvg — what a clipboard/export image contains', () => {
     // cropped to A alone (w50 h50), not the full 250-wide diagram
     expect(svg).toContain(`viewBox="${0 - P} ${0 - P} ${50 + 2 * P} ${50 + 2 * P}"`);
     expect(svg).not.toContain(`${250 + 2 * P}`); // the whole-diagram width must not appear
+  });
+});
+
+describe('tabExportSvg — connectors between selected shapes', () => {
+  it('pulls in a connector when both its shapes are selected (copying connected shapes)', () => {
+    const a = createShape('rect', 0, 0, 50, 50);
+    const b = createShape('rect', 200, 0, 50, 50);
+    const c = createConnector({ nodeId: a.id }, { nodeId: b.id });
+    [a, b, c].forEach((n) => addNode(app.activeTab, n));
+    app.selection = new Set([a.id, b.id]); // the two shapes only — NOT the connector itself
+    const svg = tabExportSvg(app);
+    expect(svg).toContain(`data-id="${c.id}"`); // the connector came along
+  });
+
+  it('omits a connector when only one of its endpoints is on a selected shape', () => {
+    const a = createShape('rect', 0, 0, 50, 50);
+    const b = createShape('rect', 200, 0, 50, 50);
+    const c = createConnector({ nodeId: a.id }, { nodeId: b.id });
+    [a, b, c].forEach((n) => addNode(app.activeTab, n));
+    app.selection = new Set([a.id]); // only A → the connector would dangle
+    const svg = tabExportSvg(app);
+    expect(svg).not.toContain(`data-id="${c.id}"`);
+  });
+
+  it('still exports an explicitly-selected connector (id in the selection)', () => {
+    const a = createShape('rect', 0, 0, 50, 50);
+    const b = createShape('rect', 200, 0, 50, 50);
+    const c = createConnector({ nodeId: a.id }, { nodeId: b.id });
+    [a, b, c].forEach((n) => addNode(app.activeTab, n));
+    app.selection = new Set([a.id, b.id, c.id]);
+    const svg = tabExportSvg(app);
+    expect(svg).toContain(`data-id="${c.id}"`);
   });
 });
 
