@@ -22,6 +22,10 @@ npm run build    # outputs dist/ (compiled JS + a rewritten index.html)
 npm run preview  # serve the built dist/ locally
 ```
 
+### Windows & macOS
+
+QuickDraw runs in the browser, so it works the same on **Windows and macOS** (and Linux) — the commands above are identical on all three (they need only Node.js + a Chromium-based browser, Chrome/Edge, for save/open; other browsers fall back to a plain download/upload). The one platform difference is the modifier key: shortcuts use **⌘ on macOS** and **Ctrl on Windows/Linux**, and both are accepted everywhere. Menu items show whichever applies to your OS.
+
 ---
 
 ## Features (Phase 1)

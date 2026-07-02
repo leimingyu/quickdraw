@@ -44,6 +44,18 @@ describe('keyboard polish', () => {
     expect(s.x).toBe(10);
   });
 
+  it('Ctrl (Windows/Linux) triggers the same shortcuts as ⌘ (Mac)', () => {
+    const a = createShape('rect', 0, 0, 40, 40);
+    const b = createShape('rect', 80, 0, 40, 40);
+    addNode(app.activeTab, a);
+    addNode(app.activeTab, b);
+    press('a', { ctrlKey: true }); // Ctrl+A → select all
+    expect(app.selection).toEqual(new Set([a.id, b.id]));
+    press('c', { ctrlKey: true }); // Ctrl+C
+    press('v', { ctrlKey: true }); // Ctrl+V
+    expect(app.activeTab.nodes).toHaveLength(4); // pasted a copy of both
+  });
+
   it('nudge shifts a free connector endpoint too', () => {
     const s = createShape('rect', 0, 0, 50, 50);
     const c = createConnector({ nodeId: s.id }, { x: 200, y: 100 });
