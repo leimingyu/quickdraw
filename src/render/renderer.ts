@@ -1,6 +1,7 @@
 import type { Shape, Tab, Viewport, Connector } from '../model/types';
 import { selectionBounds, shapeHandlePositions, rotationHandlePos, shapeCenter, ROTATION_KNOB_DIST, type Point } from '../model/geometry';
 import type { SnapGuide } from '../model/snapping';
+import { portPoints, PORTS } from '../model/quickConnect';
 import { isShape, isConnector } from '../model/document';
 import { shapeToSvg } from './shapes';
 import { connectorToSvg, connectorSegment } from './connector';
@@ -40,7 +41,7 @@ export class Renderer {
     mount.appendChild(this.svg);
   }
 
-  render(tab: Tab, selection: Set<string>, highlightId?: string, guides: SnapGuide[] = []): void {
+  render(tab: Tab, selection: Set<string>, highlightId?: string, guides: SnapGuide[] = [], hoverShapeId?: string): void {
     const vp = tab.viewport;
     const transform = `translate(${vp.panX} ${vp.panY}) scale(${vp.zoom})`;
     this.content.setAttribute('transform', transform);
@@ -57,8 +58,33 @@ export class Renderer {
       const n = tab.nodes.find((x) => x.id === [...selection][0]);
       if (n && isConnector(n)) this.drawConnectorHandles(tab, n);
     }
+    if (hoverShapeId) this.drawPorts(tab, hoverShapeId, selection);
     if (highlightId) this.drawHighlight(tab, highlightId);
     for (const g of guides) this.drawGuide(g, vp.zoom);
+  }
+
+  /** Quick-connect ports on the hovered shape: filled blue dots just outside the 4
+   *  edges. Non-interactive (hit-tested geometrically by the Select tool). The top
+   *  (`n`) port is hidden while the shape is the sole selection (rotation knob). */
+  private drawPorts(tab: Tab, id: string, selection: Set<string>): void {
+    const node = tab.nodes.find((n) => n.id === id);
+    if (!node || !isShape(node)) return;
+    const suppressN = selection.size === 1 && selection.has(id);
+    const pts = portPoints(node);
+    for (const port of PORTS) {
+      if (suppressN && port === 'n') continue;
+      const p = pts[port];
+      const dot = document.createElementNS(NS, 'circle');
+      dot.setAttribute('cx', String(p.x));
+      dot.setAttribute('cy', String(p.y));
+      dot.setAttribute('r', '5');
+      dot.setAttribute('fill', '#3b82f6');
+      dot.setAttribute('stroke', '#fff');
+      dot.setAttribute('stroke-width', '1.5');
+      dot.setAttribute('data-port', port);
+      dot.setAttribute('pointer-events', 'none');
+      this.overlay.appendChild(dot);
+    }
   }
 
   /** Alignment guide shown while a drag is snapped (rose, thin, non-interactive). */
