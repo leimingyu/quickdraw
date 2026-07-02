@@ -21,15 +21,30 @@ describe('connector geometry', () => {
     expect(seg).toEqual({ x1: 100, y1: 50, x2: 300, y2: 50 });
   });
 
-  it('re-snaps to a corner connection point after a shape moves diagonally', () => {
+  it('clips each end to the true edge (not the corner) after a diagonal move', () => {
     const { tab, a, b } = tabWithTwoBoxes();
     const c = createConnector({ nodeId: a.id }, { nodeId: b.id });
     addNode(tab, c);
     b.y = 400; // B now far below-right of A
     const seg = connectorSegment(tab, c)!;
-    // A snaps to its bottom-right corner, B to its top-left corner (both facing each other)
-    expect({ x: seg.x1, y: seg.y1 }).toEqual({ x: 100, y: 100 });
-    expect({ x: seg.x2, y: seg.y2 }).toEqual({ x: 300, y: 400 });
+    // center→center ray leaves A through its bottom edge and enters B through its top —
+    // partway across, where the line actually crosses, not snapped to a corner handle.
+    expect({ x: seg.x1, y: seg.y1 }).toEqual({ x: 87.5, y: 100 });
+    expect({ x: seg.x2, y: seg.y2 }).toEqual({ x: 312.5, y: 400 });
+  });
+
+  it('clips an attached end to the ellipse outline, not its bounding box', () => {
+    const tab = createTab();
+    const e = createShape('ellipse', 0, 0, 100, 100); // circle r=50, center (50,50)
+    const b = createShape('rect', 200, 200, 100, 100); // center (250,250), down-right
+    addNode(tab, e);
+    addNode(tab, b);
+    const c = createConnector({ nodeId: e.id }, { nodeId: b.id });
+    addNode(tab, c);
+    const seg = connectorSegment(tab, c)!;
+    expect(Math.hypot(seg.x1 - 50, seg.y1 - 50)).toBeCloseTo(50, 6); // on the circle
+    expect(seg.x1).toBeLessThan(100); // not the bbox SE corner
+    expect(seg.y1).toBeLessThan(100);
   });
 
   it('uses a floating endpoint as-is (for the live preview)', () => {

@@ -1,9 +1,13 @@
 import type { Connector, ConnectionPoint, Endpoint, Shape, Tab } from '../model/types';
 import { isAttached, isShape } from '../model/document';
-import { shapeHandlePositions, type Handle, type Point } from '../model/geometry';
+import { shapeHandlePositions, shapeCenter, clipToOutline, outlineExitNormal, type Point } from '../model/geometry';
 
 /** Drop within this many screen px of a connection point to pin an endpoint to it. */
 const PIN_DISTANCE = 22;
+
+/** World-unit stub each elbow end leaves the shape by before turning, so the route
+ *  exits perpendicular and clears the shape it leaves. */
+const ELBOW_STUB = 16;
 
 const NS = 'http://www.w3.org/2000/svg';
 
@@ -24,23 +28,42 @@ export function endpointCenter(tab: Tab, e: Endpoint): Point | null {
   return { x: e.x, y: e.y };
 }
 
-/** The connection point (of the 8, in world space, rotated with the shape) nearest `target`. */
-function nearestPoint(pts: Record<Handle, Point>, target: Point): Point {
-  let best: Point = { x: 0, y: 0 };
-  let bestD = Infinity;
-  for (const p of Object.values(pts)) {
-    const d = (p.x - target.x) ** 2 + (p.y - target.y) ** 2;
-    if (d < bestD) { bestD = d; best = p; }
-  }
-  return best;
+/** An attached end's point on the shape plus the outward orthogonal direction it leaves
+ *  (used to route elbows perpendicular to the edge). */
+interface End { p: Point; dir: Point; }
+
+/** Outward, axis-aligned normal for a pinned connection point: the handle's offset from
+ *  the shape center, snapped to the dominant axis (world space, rotated with the shape). */
+function anchorNormal(shape: Shape, anchor: ConnectionPoint): Point {
+  const c = shapeCenter(shape);
+  const p = shapeHandlePositions(shape)[anchor];
+  const dx = p.x - c.x, dy = p.y - c.y;
+  return Math.abs(dx) >= Math.abs(dy)
+    ? { x: Math.sign(dx) || 1, y: 0 }
+    : { x: 0, y: Math.sign(dy) || 1 };
 }
 
-/** Where an attached end sits on its shape: the pinned point if `anchor` is set,
- *  else the connection point facing the other end's center. Rotates with the shape. */
-function attachedPoint(shape: Shape, e: Endpoint, target: Point): Point {
+/** Where an attached end meets its shape and the direction it leaves. A pinned end holds
+ *  its fixed connection point; a dynamic end clips to the true outline facing `target`. */
+function attachedEnd(shape: Shape, e: Endpoint, target: Point): End {
   const pts = shapeHandlePositions(shape);
-  if (isAttached(e) && e.anchor && pts[e.anchor]) return pts[e.anchor];
-  return nearestPoint(pts, target);
+  if (isAttached(e) && e.anchor && pts[e.anchor]) {
+    return { p: pts[e.anchor], dir: anchorNormal(shape, e.anchor) };
+  }
+  return { p: clipToOutline(shape, target), dir: outlineExitNormal(shape, target) };
+}
+
+/** Resolve both ends of a connector: their points and (for attached ends) exit normals.
+ *  A floating end has no exit direction (`null`). Null if an attached shape is missing. */
+function connectorEnds(tab: Tab, c: Connector): { a: Point; b: Point; da: Point | null; db: Point | null } | null {
+  const ca = endpointCenter(tab, c.from);
+  const cb = endpointCenter(tab, c.to);
+  if (!ca || !cb) return null;
+  const sa = attachedShape(tab, c.from);
+  const sb = attachedShape(tab, c.to);
+  const from = sa ? attachedEnd(sa, c.from, cb) : { p: ca, dir: null };
+  const to = sb ? attachedEnd(sb, c.to, ca) : { p: cb, dir: null };
+  return { a: from.p, b: to.p, da: from.dir, db: to.dir };
 }
 
 /** Attach an endpoint to `shape` at the connection point nearest `world` when the
@@ -57,26 +80,57 @@ export function attachEndpoint(shape: Shape, world: Point, zoom: number): Endpoi
 }
 
 export function connectorSegment(tab: Tab, c: Connector): Segment | null {
-  const a = endpointCenter(tab, c.from);
-  const b = endpointCenter(tab, c.to);
-  if (!a || !b) return null;
-  const sa = attachedShape(tab, c.from);
-  const sb = attachedShape(tab, c.to);
-  const p1 = sa ? attachedPoint(sa, c.from, b) : a;
-  const p2 = sb ? attachedPoint(sb, c.to, a) : b;
-  return { x1: p1.x, y1: p1.y, x2: p2.x, y2: p2.y };
+  const ends = connectorEnds(tab, c);
+  if (!ends) return null;
+  return { x1: ends.a.x, y1: ends.a.y, x2: ends.b.x, y2: ends.b.y };
 }
 
-/** Orthogonal (right-angle) route between the segment ends: a 4-point Z that
- *  splits along the dominant axis. */
-export function elbowRoute(seg: Segment): Point[] {
+/** Dominant-axis direction from `from` toward `to` (fallback exit for a floating end). */
+function fallbackDir(from: Point, to: Point): Point {
+  const dx = to.x - from.x, dy = to.y - from.y;
+  return Math.abs(dx) >= Math.abs(dy)
+    ? { x: Math.sign(dx) || 1, y: 0 }
+    : { x: 0, y: Math.sign(dy) || 1 };
+}
+
+/**
+ * Orthogonal (right-angle) route between the segment ends.
+ *
+ * With exit directions (`dir1`/`dir2`, the outward edge normals), each end leaves its
+ * shape perpendicular by a short stub, then the stubs are joined by a Z (parallel exits)
+ * or an L (perpendicular exits) — so the route never cuts back through the two shapes.
+ * With no directions (both ends floating) it falls back to the naive midpoint split.
+ */
+export function elbowRoute(seg: Segment, dir1?: Point | null, dir2?: Point | null): Point[] {
   const { x1, y1, x2, y2 } = seg;
-  if (Math.abs(x2 - x1) >= Math.abs(y2 - y1)) {
-    const mx = (x1 + x2) / 2; // split vertically at the horizontal midpoint
-    return [{ x: x1, y: y1 }, { x: mx, y: y1 }, { x: mx, y: y2 }, { x: x2, y: y2 }];
+  const p1 = { x: x1, y: y1 }, p2 = { x: x2, y: y2 };
+  if (!dir1 && !dir2) {
+    if (Math.abs(x2 - x1) >= Math.abs(y2 - y1)) {
+      const mx = (x1 + x2) / 2; // split vertically at the horizontal midpoint
+      return [p1, { x: mx, y: y1 }, { x: mx, y: y2 }, p2];
+    }
+    const my = (y1 + y2) / 2; // split horizontally at the vertical midpoint
+    return [p1, { x: x1, y: my }, { x: x2, y: my }, p2];
   }
-  const my = (y1 + y2) / 2; // split horizontally at the vertical midpoint
-  return [{ x: x1, y: y1 }, { x: x1, y: my }, { x: x2, y: my }, { x: x2, y: y2 }];
+  const d1 = dir1 ?? fallbackDir(p1, p2);
+  const d2 = dir2 ?? fallbackDir(p2, p1);
+  const a1 = { x: x1 + d1.x * ELBOW_STUB, y: y1 + d1.y * ELBOW_STUB };
+  const a2 = { x: x2 + d2.x * ELBOW_STUB, y: y2 + d2.y * ELBOW_STUB };
+  const h1 = Math.abs(d1.x) >= Math.abs(d1.y); // leaves horizontally?
+  const h2 = Math.abs(d2.x) >= Math.abs(d2.y);
+  let mids: Point[];
+  if (h1 && h2) {
+    const mx = (a1.x + a2.x) / 2; // both horizontal → Z split at mid-x
+    mids = [{ x: mx, y: a1.y }, { x: mx, y: a2.y }];
+  } else if (!h1 && !h2) {
+    const my = (a1.y + a2.y) / 2; // both vertical → Z split at mid-y
+    mids = [{ x: a1.x, y: my }, { x: a2.x, y: my }];
+  } else if (h1) {
+    mids = [{ x: a2.x, y: a1.y }]; // horizontal then vertical → single L corner
+  } else {
+    mids = [{ x: a1.x, y: a2.y }]; // vertical then horizontal → single L corner
+  }
+  return [p1, a1, ...mids, a2, p2];
 }
 
 /** Control point for the curved (quadratic) route: chord midpoint pushed perpendicular. */
@@ -100,11 +154,12 @@ function sampleQuad(p0: Point, c: Point, p1: Point, n: number): Point[] {
   return pts;
 }
 
-/** The connector's drawn points: straight (2 pts), elbow (4 pts), or a sampled curve. */
+/** The connector's drawn points: straight (2 pts), a smart elbow, or a sampled curve. */
 export function connectorRoute(tab: Tab, c: Connector): Point[] | null {
-  const seg = connectorSegment(tab, c);
-  if (!seg) return null;
-  if (c.style.routing === 'elbow') return elbowRoute(seg);
+  const ends = connectorEnds(tab, c);
+  if (!ends) return null;
+  const seg = { x1: ends.a.x, y1: ends.a.y, x2: ends.b.x, y2: ends.b.y };
+  if (c.style.routing === 'elbow') return elbowRoute(seg, ends.da, ends.db);
   if (c.style.routing === 'curved') {
     return sampleQuad({ x: seg.x1, y: seg.y1 }, curveControl(seg), { x: seg.x2, y: seg.y2 }, 16);
   }
@@ -142,7 +197,7 @@ export function connectorToSvg(tab: Tab, c: Connector, selected: boolean): SVGGE
   let el: SVGElement;
   if (c.style.routing === 'elbow') {
     const poly = document.createElementNS(NS, 'polyline');
-    poly.setAttribute('points', elbowRoute(seg).map((p) => `${p.x},${p.y}`).join(' '));
+    poly.setAttribute('points', connectorRoute(tab, c)!.map((p) => `${p.x},${p.y}`).join(' '));
     poly.setAttribute('fill', 'none'); // a polyline fills by default — must disable
     el = poly;
   } else if (c.style.routing === 'curved') {

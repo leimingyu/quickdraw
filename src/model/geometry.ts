@@ -104,6 +104,78 @@ export function shapeHandlePositions(s: Shape): Record<Handle, Point> {
   return out;
 }
 
+/** Smallest positive intersection of the ray t·(dx,dy) from the origin with a closed
+ *  polygon (vertices given relative to the origin). Returns the offset from the origin. */
+function rayToPolygon(dx: number, dy: number, verts: Point[]): Point {
+  let best: Point = { x: 0, y: 0 };
+  let bestT = Infinity;
+  for (let i = 0; i < verts.length; i++) {
+    const a = verts[i];
+    const b = verts[(i + 1) % verts.length];
+    const ex = b.x - a.x, ey = b.y - a.y;
+    const denom = dx * ey - dy * ex;
+    if (denom === 0) continue; // ray parallel to this edge
+    const t = (a.x * ey - a.y * ex) / denom; // ray parameter
+    const u = (a.x * dy - a.y * dx) / denom; // position along the edge
+    if (t >= 0 && u >= 0 && u <= 1 && t < bestT) {
+      bestT = t;
+      best = { x: t * dx, y: t * dy };
+    }
+  }
+  return best;
+}
+
+/** Offset from a shape's center to its outline along local (unrotated) direction (dx,dy).
+ *  Caller guarantees (dx,dy) is non-zero. */
+function outlineOffset(s: Shape, dx: number, dy: number): Point {
+  const rx = s.w / 2, ry = s.h / 2;
+  switch (s.kind) {
+    case 'ellipse': {
+      const t = 1 / Math.hypot(dx / rx, dy / ry);
+      return { x: dx * t, y: dy * t };
+    }
+    case 'diamond': {
+      const t = 1 / (Math.abs(dx) / rx + Math.abs(dy) / ry);
+      return { x: dx * t, y: dy * t };
+    }
+    case 'triangle': // apex top-middle, base along the bottom; vertices center-relative
+      return rayToPolygon(dx, dy, [{ x: 0, y: -ry }, { x: rx, y: ry }, { x: -rx, y: ry }]);
+    default: { // rect, rounded, text: bounding box
+      const t = 1 / Math.max(Math.abs(dx) / rx, Math.abs(dy) / ry);
+      return { x: dx * t, y: dy * t };
+    }
+  }
+}
+
+/** The point where the ray from a shape's center toward `toward` crosses the shape's
+ *  true outline (rect/rounded/text box, ellipse, diamond, triangle). Rotation-aware.
+ *  Returns the center itself if `toward` coincides with it. */
+export function clipToOutline(s: Shape, toward: Point): Point {
+  const c = shapeCenter(s);
+  const deg = s.rotation ?? 0;
+  const local = deg ? rotatePoint(toward, c, -deg) : toward; // target in the unrotated frame
+  const dx = local.x - c.x, dy = local.y - c.y;
+  if (dx === 0 && dy === 0) return { x: c.x, y: c.y };
+  const off = outlineOffset(s, dx, dy);
+  const p = { x: c.x + off.x, y: c.y + off.y };
+  return deg ? rotatePoint(p, c, deg) : p;
+}
+
+/** The outward, axis-aligned (in the shape's own frame) normal at the point where the
+ *  center→toward ray leaves the outline — i.e. which edge the ray exits. Rotation-aware:
+ *  the returned unit vector is rotated into world space with the shape. */
+export function outlineExitNormal(s: Shape, toward: Point): Point {
+  const c = shapeCenter(s);
+  const deg = s.rotation ?? 0;
+  const local = deg ? rotatePoint(toward, c, -deg) : toward;
+  const dx = local.x - c.x, dy = local.y - c.y;
+  const rx = s.w / 2, ry = s.h / 2;
+  const n: Point = Math.abs(dx) / rx >= Math.abs(dy) / ry
+    ? { x: Math.sign(dx) || 1, y: 0 }   // exits a left/right edge
+    : { x: 0, y: Math.sign(dy) || 1 };  // exits a top/bottom edge
+  return deg ? rotatePoint(n, { x: 0, y: 0 }, deg) : n;
+}
+
 /** The rotation knob position: `dist` world units past the top-middle edge, rotated. */
 export function rotationHandlePos(s: Shape, dist: number): Point {
   const c = shapeCenter(s);

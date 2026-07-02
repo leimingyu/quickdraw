@@ -25,7 +25,41 @@ describe('elbow routing', () => {
     ]);
   });
 
-  it('connectorRoute is 2 points when straight, 4 when elbow', () => {
+  it('with exit directions, stubs out along the normals then Z-connects', () => {
+    // both ends leave horizontally (A exits right, B is entered from its left)
+    expect(elbowRoute({ x1: 100, y1: 0, x2: 300, y2: 100 }, { x: 1, y: 0 }, { x: -1, y: 0 })).toEqual([
+      { x: 100, y: 0 }, { x: 116, y: 0 }, { x: 200, y: 0 },
+      { x: 200, y: 100 }, { x: 284, y: 100 }, { x: 300, y: 100 },
+    ]);
+  });
+
+  it('with mixed exit directions, makes a clean L (no backtrack)', () => {
+    // A exits right (+x), B exits up (its top edge faces A) → single corner
+    expect(elbowRoute({ x1: 100, y1: 50, x2: 200, y2: 200 }, { x: 1, y: 0 }, { x: 0, y: -1 })).toEqual([
+      { x: 100, y: 50 }, { x: 116, y: 50 }, { x: 200, y: 50 },
+      { x: 200, y: 184 }, { x: 200, y: 200 },
+    ]);
+  });
+
+  it('routes an elbow with clipped, perpendicular ends between two boxes', () => {
+    const tab = createTab();
+    const a = createShape('rect', 0, 0, 100, 100);     // center (50,50)
+    const b = createShape('rect', 300, 200, 100, 100); // center (350,250)
+    const c = createConnector({ nodeId: a.id }, { nodeId: b.id });
+    [a, b, c].forEach((n) => addNode(tab, n));
+    c.style.routing = 'elbow';
+    const route = connectorRoute(tab, c)!;
+    expect(route[0].x).toBe(100);          // clipped to A's right edge
+    expect(route[0].y).toBeCloseTo(83.333, 3);
+    expect(route[route.length - 1].x).toBe(300); // clipped to B's left edge
+    expect(route[route.length - 1].y).toBeCloseTo(216.667, 3);
+    // ends leave perpendicular to the edge they clip to (first/last legs horizontal)
+    expect(route[1].y).toBe(route[0].y);
+    expect(route[1].x).toBeGreaterThan(route[0].x); // exits rightward out of A
+    expect(route[route.length - 1].y).toBe(route[route.length - 2].y);
+  });
+
+  it('connectorRoute is a 2-point line when straight, an orthogonal path when elbow', () => {
     const tab = createTab();
     const a = createShape('rect', 0, 0, 100, 100);
     const b = createShape('rect', 300, 0, 100, 100);
@@ -33,7 +67,11 @@ describe('elbow routing', () => {
     [a, b, c].forEach((n) => addNode(tab, n));
     expect(connectorRoute(tab, c)).toHaveLength(2);
     c.style.routing = 'elbow';
-    expect(connectorRoute(tab, c)).toHaveLength(4);
+    const route = connectorRoute(tab, c)!;
+    expect(route.length).toBeGreaterThan(2);
+    for (let i = 0; i + 1 < route.length; i++) { // every leg is axis-aligned
+      expect(route[i].x === route[i + 1].x || route[i].y === route[i + 1].y).toBe(true);
+    }
   });
 
   it('renders a fill:none polyline for elbow, a line for straight', () => {
