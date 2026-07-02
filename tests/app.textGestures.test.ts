@@ -15,7 +15,7 @@ beforeEach(() => {
 });
 afterEach(() => app.destroy());
 
-const editor = () => document.querySelector('input.text-editor') as HTMLInputElement | null;
+const editor = () => document.querySelector('textarea.text-editor') as HTMLTextAreaElement | null;
 
 // Simulate a real double-click: two pointer-ups close in time/space at the same
 // spot. The app detects double-clicks on pointerup (not the native `dblclick`,
