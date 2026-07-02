@@ -19,6 +19,7 @@ export class App {
   workspace: Workspace;
   selection = new Set<string>();
   highlightId?: string;
+  hoverShapeId?: string; // shape whose quick-connect ports are shown (Select tool hover)
   snapGuides: SnapGuide[] = []; // alignment guides shown during a snapped drag
   connectorRouting: Routing = 'straight'; // routing applied to newly drawn connectors
   connectorArrow = true; // whether newly drawn connectors get an end arrowhead (false = plain line)
@@ -65,6 +66,7 @@ export class App {
 
   setTool(name: ToolName): void {
     this.current.onDeactivate?.();
+    this.hoverShapeId = undefined; // hover ports are a Select-tool affordance
     this.currentToolName = name;
     this.current = this.tools.get(name) ?? new NoopTool();
     this.current.onActivate?.();
@@ -74,7 +76,7 @@ export class App {
   }
 
   render(): void {
-    this.renderer.render(this.activeTab, this.selection, this.highlightId, this.snapGuides);
+    this.renderer.render(this.activeTab, this.selection, this.highlightId, this.snapGuides, this.hoverShapeId);
     this.onRender?.();
   }
 
