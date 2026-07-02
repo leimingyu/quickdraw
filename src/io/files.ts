@@ -57,13 +57,13 @@ export async function saveWorkspace(app: App): Promise<void> {
       const writable = await fileHandle.createWritable();
       await writable.write(text);
       await writable.close();
+      return;
     } catch (err) {
       if ((err as Error).name === 'AbortError') return; // user cancelled the picker
-      throw err;
+      fileHandle = null; // picker unavailable/blocked (e.g. opened from file://) → download instead
     }
-  } else {
-    downloadBlob(new Blob([text], { type: 'application/json' }), 'drawing.quickdraw.json');
   }
+  downloadBlob(new Blob([text], { type: 'application/json' }), 'drawing.quickdraw.json');
 }
 
 export async function openWorkspace(app: App): Promise<void> {
@@ -79,7 +79,7 @@ export async function openWorkspace(app: App): Promise<void> {
       text = await (await h.getFile()).text();
     } catch (err) {
       if ((err as Error).name === 'AbortError') return; // cancelled
-      throw err;
+      text = await pickFileText(); // picker blocked (e.g. opened from file://) → hidden file input
     }
   } else {
     text = await pickFileText();
