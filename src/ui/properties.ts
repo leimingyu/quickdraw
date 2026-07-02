@@ -41,6 +41,7 @@ export function mountProperties(app: App, container: HTMLElement): { update: () 
       dock.appendChild(colorRow('Fill', 'fill', firstShape.style.fill, (v) => ({ fill: v })));
       dock.appendChild(numberRow('Font', 'fontSize', firstShape.style.fontSize, 4, (v) => ({ fontSize: v })));
       dock.appendChild(colorRow('Text', 'fontColor', firstShape.style.fontColor, (v) => ({ fontColor: v })));
+      dock.appendChild(rotationRow());
     }
     if (firstConn) {
       dock.appendChild(toggleRow('Arrow start', 'arrowStart', !!firstConn.style.arrowStart, (v) => ({ arrowStart: v })));
@@ -110,6 +111,19 @@ export function mountProperties(app: App, container: HTMLElement): { update: () 
       seg.appendChild(b);
     }
     row.appendChild(seg);
+    return row;
+  }
+
+  /** Reset a rotated shape back to 0° (landscape). Always shown for shapes so it
+   *  stays reachable after a rotate drag (which doesn't rebuild this panel). */
+  function rotationRow(): HTMLElement {
+    const row = labeledRow('Rotation');
+    const btn = document.createElement('button');
+    btn.textContent = 'Reset';
+    btn.dataset.action = 'reset-rotation';
+    btn.title = 'Reset rotation to 0° (landscape)';
+    btn.addEventListener('click', () => app.resetRotation());
+    row.appendChild(btn);
     return row;
   }
 
