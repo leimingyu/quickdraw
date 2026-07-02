@@ -1,0 +1,45 @@
+name: Auto-fix labeled issues
+
+on:
+  issues:
+    types: [opened, labeled]
+
+jobs:
+  auto-fix:
+    # Only run when the claude-fix label is present
+    if: contains(github.event.issue.labels.*.name, 'claude-fix')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      issues: write
+      pull-requests: write
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: anthropics/claude-code-action@v1
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          prompt: |
+            You are fixing issue #${{ github.event.issue.number }} in this repository.
+
+            Issue title: ${{ github.event.issue.title }}
+
+            Steps:
+            1. Read the full issue with: gh issue view ${{ github.event.issue.number }}
+            2. Locate the relevant code and reproduce the problem.
+               If feasible, write a failing test that captures the bug FIRST.
+            3. Implement the minimal fix.
+            4. Run the project's tests/build and verify everything passes.
+            5. Create a branch named fix/issue-${{ github.event.issue.number }},
+               commit with a clear message, push, and open a PR with
+               "Fixes #${{ github.event.issue.number }}" in the body.
+            6. If you cannot reproduce or fix it, DO NOT push anything —
+               instead comment on the issue explaining what you found and why.
+          claude_args: |
+            --max-turns 30
+            --model claude-sonnet-4-6
+        env:
+          GH_TOKEN: ${{ github.token }}
