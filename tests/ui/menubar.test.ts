@@ -56,4 +56,17 @@ describe('menu bar', () => {
     expect(hint).not.toBeNull();
     expect(hint!.textContent).toMatch(/^(⌘Z|Ctrl\+Z)$/); // ⌘ on Mac, Ctrl on Windows/Linux
   });
+
+  it('offers "Copy to clipboard (PNG)" in File with a ⌘⇧C hint', () => {
+    title('File').click();
+    const copy = item('Copy to clipboard (PNG)');
+    expect(copy).toBeTruthy();
+    const hint = copy.querySelector('.menu-key');
+    expect(hint!.textContent).toMatch(/^(⌘⇧C|Ctrl\+Shift\+C)$/);
+  });
+
+  it('clicking "Copy to clipboard (PNG)" runs without throwing (clipboard absent in jsdom)', () => {
+    title('File').click();
+    expect(() => item('Copy to clipboard (PNG)').click()).not.toThrow();
+  });
 });

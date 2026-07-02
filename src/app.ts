@@ -24,6 +24,7 @@ export class App {
   connectorArrow = true; // whether newly drawn connectors get an end arrowhead (false = plain line)
   onRender?: () => void;
   onSave?: () => void;
+  onCopyImage?: () => void; // ⌘⇧C — copy the diagram (or selection) to the OS clipboard as an image
   readonly renderer: Renderer;
   currentToolName: ToolName = 'select';
 
@@ -381,6 +382,13 @@ export class App {
         ev.preventDefault();
         if (ev.shiftKey) this.ungroup();
         else this.group();
+        return;
+      }
+      // ⌘⇧C copies the diagram (or selection) to the OS clipboard as an image —
+      // always handled, since it can copy the whole diagram with nothing selected.
+      if (mod && ev.shiftKey && ev.key.toLowerCase() === 'c') {
+        ev.preventDefault();
+        this.onCopyImage?.();
         return;
       }
       // Clipboard: only intercept when there's something to act on, so an empty

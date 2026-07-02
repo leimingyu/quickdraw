@@ -1,5 +1,5 @@
 import type { App } from '../app';
-import { saveWorkspace, openWorkspace, exportTabSvg, exportTabPng } from '../io/files';
+import { saveWorkspace, openWorkspace, exportTabSvg, exportTabPng, copyTabPng } from '../io/files';
 import { isMac, formatShortcut } from './platform';
 
 type Item = { label: string; run: () => void; keys?: string } | 'separator';
@@ -22,6 +22,7 @@ export function mountMenuBar(app: App, container: HTMLElement): void {
         'separator',
         { label: 'Export as SVG', run: () => exportTabSvg(app) },
         { label: 'Export as PNG (300 DPI)', run: () => exportTabPng(app) },
+        { label: 'Copy to clipboard (PNG)', run: () => void copyTabPng(app), keys: 'mod+shift+C' },
         'separator',
         { label: 'Clear canvas', run: () => { if (app.activeTab.nodes.length === 0 || confirm('Clear the whole canvas?')) app.resetTab(); } },
       ],
