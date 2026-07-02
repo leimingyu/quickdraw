@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import type { Shape } from '../../src/model/types';
 import {
   pointInShape, hitTest, shapeInRect, selectionBounds, resizeBox, zoomAt, handlePositions,
+  clipToOutline,
 } from '../../src/model/geometry';
 
 function shape(over: Partial<Shape>): Shape {
@@ -76,5 +77,53 @@ describe('geometry', () => {
     const pos = handlePositions({ x: 0, y: 0, w: 100, h: 100 });
     expect(pos.se).toEqual({ x: 100, y: 100 });
     expect(pos.n).toEqual({ x: 50, y: 0 });
+  });
+});
+
+describe('clipToOutline', () => {
+  it('clips to a rect edge along the center→target ray', () => {
+    const s = shape({ kind: 'rect', x: 0, y: 0, w: 100, h: 100 }); // center (50,50)
+    expect(clipToOutline(s, { x: 200, y: 50 })).toEqual({ x: 100, y: 50 });  // right edge
+    expect(clipToOutline(s, { x: 150, y: 250 })).toEqual({ x: 75, y: 100 }); // bottom, diagonal
+  });
+
+  it('clips a diagonal to the true rect edge, not the nearest corner', () => {
+    const s = shape({ kind: 'rect', x: 0, y: 0, w: 100, h: 100 });
+    // steeper in y → exits the bottom edge partway, not the SE corner (100,100)
+    expect(clipToOutline(s, { x: 350, y: 450 })).toEqual({ x: 87.5, y: 100 });
+  });
+
+  it('clips to the ellipse outline, on the ellipse and not its bounding box', () => {
+    const s = shape({ kind: 'ellipse', x: 0, y: 0, w: 100, h: 100 }); // circle r=50
+    const p = clipToOutline(s, { x: 200, y: 200 }); // 45° diagonal
+    expect(Math.hypot(p.x - 50, p.y - 50)).toBeCloseTo(50, 6); // lands on the circle
+    expect(p.x).toBeCloseTo(50 + 50 / Math.SQRT2, 6);
+    expect(p.x).toBeLessThan(100); // not the bbox corner
+  });
+
+  it('clips to a diamond edge', () => {
+    const s = shape({ kind: 'diamond', x: 0, y: 0, w: 100, h: 100 });
+    expect(clipToOutline(s, { x: 150, y: 150 })).toEqual({ x: 75, y: 75 }); // |dx|/50+|dy|/50=1
+  });
+
+  it('clips to a triangle edge', () => {
+    const s = shape({ kind: 'triangle', x: 0, y: 0, w: 100, h: 100 });
+    // apex (50,0), base-right (100,100), base-left (0,100); center (50,50)
+    expect(clipToOutline(s, { x: 50, y: 300 })).toEqual({ x: 50, y: 100 }); // down → base edge
+    const r = clipToOutline(s, { x: 300, y: 50 }); // right → right leg
+    expect(r.x).toBeCloseTo(75, 6);
+    expect(r.y).toBeCloseTo(50, 6);
+  });
+
+  it('clips on the rotated outline', () => {
+    const s = shape({ kind: 'rect', x: 0, y: 0, w: 200, h: 100, rotation: 90 }); // center (100,50)
+    const p = clipToOutline(s, { x: 100, y: -100 }); // straight up in world
+    expect(p.x).toBeCloseTo(100, 6);
+    expect(p.y).toBeCloseTo(-50, 6); // rotated: the half-width (100) becomes the top extent
+  });
+
+  it('returns the center when the target coincides with it', () => {
+    const s = shape({ kind: 'rect', x: 0, y: 0, w: 100, h: 100 });
+    expect(clipToOutline(s, { x: 50, y: 50 })).toEqual({ x: 50, y: 50 });
   });
 });
