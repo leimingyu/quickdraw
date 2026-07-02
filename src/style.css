@@ -40,6 +40,7 @@ body { font: 14px system-ui, sans-serif; }
 .props button { padding: 2px 8px; cursor: pointer; }
 .props button.active { background: #3b82f6; color: #fff; }
 .props input[type="number"] { width: 56px; }
+.props select { max-width: 110px; cursor: pointer; }
 .seg { display: flex; gap: 2px; }
 .seg button { padding: 2px 6px; cursor: pointer; font-size: 12px; }
 .seg button.active { background: #3b82f6; color: #fff; }

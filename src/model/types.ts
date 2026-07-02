@@ -3,12 +3,19 @@ export type Anchor = 'top' | 'right' | 'bottom' | 'left' | 'center';
 /** A shape's 8 connection points (corners + edge midpoints), matching the resize handles. */
 export type ConnectionPoint = 'nw' | 'n' | 'ne' | 'e' | 'se' | 's' | 'sw' | 'w';
 
+/** Horizontal alignment of a shape's text label. Absent = centered. */
+export type TextAlign = 'left' | 'center' | 'right';
+
 export interface ShapeStyle {
   fill: string;
   stroke: string;
   strokeWidth: number;
   fontSize: number;
   fontColor: string;
+  fontFamily?: string; // CSS font stack; absent = default sans-serif
+  bold?: boolean;
+  italic?: boolean;
+  textAlign?: TextAlign; // absent = 'center'
   dashed?: boolean;
 }
 
