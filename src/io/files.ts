@@ -1,6 +1,7 @@
 import type { App } from '../app';
 import { serializeWorkspace, deserializeWorkspace } from './serialize';
 import { tabToSvgString } from '../render/exportSvg';
+import { isConnector, isAttached } from '../model/document';
 import { pngWithDpi } from './png';
 import { showToast } from '../ui/toast';
 
@@ -161,7 +162,16 @@ export function exportTabPng(app: App): void {
 export function tabExportSvg(app: App): string {
   const tab = app.activeTab;
   if (app.selection.size === 0) return tabToSvgString(tab);
-  const nodes = tab.nodes.filter((n) => app.selection.has(n.id));
+  const ids = new Set(app.selection);
+  // Pull in any connector whose both attached ends land on selected shapes, so copying
+  // connected shapes brings their connectors along (mirrors marquee-select behavior).
+  for (const n of tab.nodes) {
+    if (!isConnector(n) || ids.has(n.id)) continue;
+    if (isAttached(n.from) && ids.has(n.from.nodeId) && isAttached(n.to) && ids.has(n.to.nodeId)) {
+      ids.add(n.id);
+    }
+  }
+  const nodes = tab.nodes.filter((n) => ids.has(n.id));
   return tabToSvgString({ ...tab, nodes });
 }
 
