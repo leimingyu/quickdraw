@@ -38,6 +38,7 @@ export class ConnectorTool implements Tool {
     this.start = world;
     const c = createConnector(this.endpointAt(world), { x: world.x, y: world.y });
     if (this.app.connectorRouting !== 'straight') c.style.routing = this.app.connectorRouting; // straight stays unset
+    c.style.arrowEnd = this.app.connectorArrow; // false → a plain line (PowerPoint-style)
     addNode(this.app.activeTab, c);
     this.preview = c;
     this.app.selection.clear();

@@ -81,6 +81,12 @@ describe('ConnectorTool (draw an arrow anywhere)', () => {
     expect(conns()[0].style.routing).toBeUndefined();
   });
 
+  it('draws a plain line (no end arrowhead) when connectorArrow is false', () => {
+    app.connectorArrow = false;
+    drag({ x: 10, y: 10 }, { x: 120, y: 120 });
+    expect(conns()[0].style.arrowEnd).toBe(false);
+  });
+
   it('switching tools mid-drag removes the preview', () => {
     tool.onPointerDown({ x: 10, y: 10 });
     tool.onPointerMove({ x: 120, y: 120 });

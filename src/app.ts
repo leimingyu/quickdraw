@@ -21,6 +21,7 @@ export class App {
   highlightId?: string;
   snapGuides: SnapGuide[] = []; // alignment guides shown during a snapped drag
   connectorRouting: Routing = 'straight'; // routing applied to newly drawn connectors
+  connectorArrow = true; // whether newly drawn connectors get an end arrowhead (false = plain line)
   onRender?: () => void;
   onSave?: () => void;
   readonly renderer: Renderer;

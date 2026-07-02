@@ -158,14 +158,33 @@ export class Renderer {
     stem.setAttribute('stroke', '#3b82f6');
     stem.setAttribute('pointer-events', 'none');
     this.overlay.appendChild(stem);
-    const k = document.createElementNS(NS, 'circle');
-    k.setAttribute('cx', String(knob.x));
-    k.setAttribute('cy', String(knob.y));
-    k.setAttribute('r', '5');
-    k.setAttribute('fill', '#fff');
-    k.setAttribute('stroke', '#3b82f6');
-    k.setAttribute('data-rotate', 'true');
-    this.overlay.appendChild(k);
+    this.drawRotationKnob(knob.x, knob.y);
+  }
+
+  /** The rotation handle: a white grab circle with a ↻ (arc + arrowhead) glyph. */
+  private drawRotationKnob(kx: number, ky: number): void {
+    const bg = document.createElementNS(NS, 'circle');
+    bg.setAttribute('cx', String(kx));
+    bg.setAttribute('cy', String(ky));
+    bg.setAttribute('r', '8');
+    bg.setAttribute('fill', '#fff');
+    bg.setAttribute('stroke', '#3b82f6');
+    bg.setAttribute('data-rotate', 'true'); // grab target (hit-tested by position)
+    this.overlay.appendChild(bg);
+    const r = 4.5;
+    const arc = document.createElementNS(NS, 'path');
+    arc.setAttribute('d', `M${kx} ${ky - r}A${r} ${r} 0 1 1 ${kx - r} ${ky}`); // 270° clockwise, gap top-left
+    const head = document.createElementNS(NS, 'path');
+    head.setAttribute('d', `M${kx - r - 2} ${ky - 2}L${kx - r} ${ky + 1.5} ${kx - r + 2} ${ky - 2}`);
+    for (const p of [arc, head]) {
+      p.setAttribute('fill', 'none');
+      p.setAttribute('stroke', '#3b82f6');
+      p.setAttribute('stroke-width', '1.3');
+      p.setAttribute('stroke-linecap', 'round');
+      p.setAttribute('stroke-linejoin', 'round');
+      p.setAttribute('pointer-events', 'none');
+      this.overlay.appendChild(p);
+    }
   }
 
   private drawConnectorHandles(tab: Tab, c: Connector): void {

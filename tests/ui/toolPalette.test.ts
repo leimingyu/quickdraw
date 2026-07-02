@@ -21,13 +21,22 @@ const btn = (tool: string) => host.querySelector<HTMLButtonElement>(`.tool-btn[d
 const conn = (routing: string) => host.querySelector<HTMLButtonElement>(`.tool-btn[data-routing="${routing}"]`)!;
 
 describe('tool palette', () => {
-  it('renders the shape shortcuts plus the three connector types', () => {
+  it('renders the shapes, a Line, and the three connector types', () => {
     const btns = [...host.querySelectorAll<HTMLElement>('.tool-btn')];
-    expect(btns).toHaveLength(10);
+    expect(btns).toHaveLength(11);
     expect(btns.slice(0, 7).map((b) => b.dataset.tool))
       .toEqual(['select', 'rect', 'rounded', 'ellipse', 'diamond', 'triangle', 'text']);
-    expect(btns.slice(7).map((b) => b.dataset.routing)).toEqual(['straight', 'elbow', 'curved']);
-    expect(host.querySelectorAll('.tool-btn svg')).toHaveLength(10);
+    const connectors = btns.slice(7);
+    expect(connectors.map((b) => b.dataset.routing)).toEqual(['straight', 'straight', 'elbow', 'curved']);
+    expect(connectors.map((b) => b.dataset.arrow)).toEqual(['false', 'true', 'true', 'true']);
+    expect(host.querySelectorAll('.tool-btn svg')).toHaveLength(11);
+  });
+
+  it('the Line shortcut selects the connector tool with no arrowhead', () => {
+    host.querySelector<HTMLButtonElement>('.tool-btn[data-arrow="false"]')!.click();
+    expect(app.currentToolName).toBe('arrow');
+    expect(app.connectorArrow).toBe(false);
+    expect(app.connectorRouting).toBe('straight');
   });
 
   it('clicking a shape shortcut selects that tool', () => {

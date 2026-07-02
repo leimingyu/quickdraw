@@ -3,8 +3,11 @@ import {
   rotatePoint, pointInShape, resizeRotatedBox, shapeHandlePositions, angleFromCenter,
 } from '../../src/model/geometry';
 import { createShape } from '../../src/model/document';
+import { shapeToSvg } from '../../src/render/shapes';
+import type { ShapeKind } from '../../src/model/types';
 
 const near = (a: number, b: number, eps = 1e-6) => Math.abs(a - b) <= eps;
+const KINDS: ShapeKind[] = ['rect', 'rounded', 'ellipse', 'diamond', 'triangle', 'text'];
 
 describe('rotation geometry', () => {
   it('rotatePoint turns +90° clockwise (right → down)', () => {
@@ -46,5 +49,23 @@ describe('rotation geometry', () => {
   it('angleFromCenter: up = 0°, right = 90°', () => {
     expect(near(angleFromCenter({ x: 0, y: 0 }, { x: 0, y: -10 }), 0)).toBe(true);
     expect(near(angleFromCenter({ x: 0, y: 0 }, { x: 10, y: 0 }), 90)).toBe(true);
+  });
+
+  it('rotation applies to — and is hit-tested for — every shape kind', () => {
+    for (const kind of KINDS) {
+      const s = createShape(kind, 0, 0, 100, 40); // wide; center (50,20)
+      // (50,-10) is 30 above center: outside the wide unrotated shape...
+      expect(pointInShape(s, { x: 50, y: -10 })).toBe(false);
+      s.rotation = 90; // ...but inside once rotated tall
+      expect(pointInShape(s, { x: 50, y: -10 })).toBe(true);
+    }
+  });
+
+  it('shapeToSvg emits a rotate transform around the center for every kind', () => {
+    for (const kind of KINDS) {
+      const s = createShape(kind, 0, 0, 100, 40);
+      s.rotation = 45;
+      expect(shapeToSvg(s).getAttribute('transform')).toBe('rotate(45 50 20)');
+    }
   });
 });
