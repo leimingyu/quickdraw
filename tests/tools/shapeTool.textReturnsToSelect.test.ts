@@ -57,13 +57,14 @@ describe('issue #3: text tool returns to select after adding text', () => {
     expect(app.selection.size).toBe(0);              // empty-canvas click deselected
   });
 
-  it('geometric shape tools still stay active for continuous stamping', () => {
-    // Contrast: the return-to-select handoff is text-only; drawing tools keep drawing.
+  it('geometric shape tools also hand off to select after creating', () => {
+    // The return-to-select handoff is universal (not text-only): every shape tool
+    // returns to Select once a shape is placed.
     const rect = new ShapeTool(app, 'rect');
     app.registerTool('rect', rect);
     app.setTool('rect');
     rect.onPointerDown({ x: 0, y: 0 });
     rect.onPointerUp({ x: 0, y: 0 });
-    expect(app.currentToolName).toBe('rect'); // unchanged
+    expect(app.currentToolName).toBe('select');
   });
 });
