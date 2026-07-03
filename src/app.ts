@@ -1,11 +1,12 @@
 import { Renderer } from './render/renderer';
-import { createWorkspace, getActiveTab, addNode, removeNodes, groupNodes, ungroupNodes, expandToGroups, pruneDanglingConnectors, restyleNodes, reorderSelection, isShape, addTab as addTabModel, removeTab as removeTabModel, renameTab as renameTabModel, type StylePatch } from './model/document';
+import { createWorkspace, getActiveTab, addNode, removeNodes, groupNodes, ungroupNodes, expandToGroups, groupedShapeUnits, pruneDanglingConnectors, restyleNodes, reorderSelection, isShape, addTab as addTabModel, removeTab as removeTabModel, renameTab as renameTabModel, type StylePatch } from './model/document';
 import { copyNodes, pasteNodes } from './model/copyPaste';
 import type { ExportBackground, Node, Routing, Shape, Tab, Workspace } from './model/types';
 import type { SnapGuide } from './model/snapping';
+import { alignDeltas, distributeDeltas, type AlignOp, type DistributeOp } from './model/align';
 import type { Tool, ToolName } from './tools/types';
 import { History } from './history/history';
-import { zoomAt, hitTest } from './model/geometry';
+import { zoomAt, hitTest, selectionBounds, type Box } from './model/geometry';
 
 const PASTE_STEP = 16; // world-unit offset applied to each paste so it doesn't cover the original
 
@@ -25,6 +26,8 @@ export class App {
   connectorArrow = true; // whether newly drawn connectors get an end arrowhead (false = plain line)
   exportBackground: ExportBackground = 'transparent'; // background baked into exported PNG/SVG files
   exportDpi = 300; // raster resolution for PNG export; 96/192/288 = 1×/2×/3×, 300 = print default
+  showGrid = false; // paint the canvas grid (a working aid; never baked into exports)
+  snapToGrid = false; // quantize shape positions to the grid while dragging / drawing
   onRender?: () => void;
   onSave?: () => void;
   onCopyImage?: () => void; // ⌘⇧C — copy the diagram (or selection) to the OS clipboard as an image
@@ -78,7 +81,7 @@ export class App {
   }
 
   render(): void {
-    this.renderer.render(this.activeTab, this.selection, this.highlightId, this.snapGuides, this.hoverShapeId);
+    this.renderer.render(this.activeTab, this.selection, this.highlightId, this.snapGuides, this.hoverShapeId, this.showGrid);
     this.onRender?.();
   }
 
@@ -269,6 +272,36 @@ export class App {
       }
     }
     if (changed) this.commit();
+  }
+
+  /** Align the selection's units (a group counts as one rigid unit) to a common edge/center.
+   *  No-op for fewer than two units; records one history entry only when something moves. */
+  align(op: AlignOp): void {
+    this.applyUnitDeltas((boxes) => alignDeltas(boxes, op), 2);
+  }
+
+  /** Distribute the selection's units with equal gaps along one axis. No-op for fewer than
+   *  three units; records one history entry only when something moves. */
+  distribute(op: DistributeOp): void {
+    this.applyUnitDeltas((boxes) => distributeDeltas(boxes, op), 3);
+  }
+
+  /** Shared driver for align/distribute: build group-aware units, ask `compute` for a delta
+   *  per unit box, apply each delta to that unit's member shapes, and commit once if anything
+   *  actually moved. Needs at least `minUnits` units, else it's a no-op. */
+  private applyUnitDeltas(compute: (boxes: Box[]) => { dx: number; dy: number }[], minUnits: number): void {
+    const units = groupedShapeUnits(this.activeTab, this.selection);
+    if (units.length < minUnits) return;
+    const boxes = units.map((u) => selectionBounds(u)!); // each unit has ≥1 shape → non-null
+    const deltas = compute(boxes);
+    let moved = false;
+    units.forEach((unit, i) => {
+      const { dx, dy } = deltas[i];
+      if (dx === 0 && dy === 0) return;
+      for (const s of unit) { s.x += dx; s.y += dy; }
+      moved = true;
+    });
+    if (moved) this.commit();
   }
 
   /** Select every node in the active tab. Not undoable (selection change only). */

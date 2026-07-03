@@ -23,9 +23,9 @@ export function tabToSvgString(tab: Tab, padding = EXPORT_PADDING, background?: 
 
   const svg = renderer.svg;
   const defs = svg.querySelector('defs')?.outerHTML ?? '';
-  // First <g> is the content layer (Renderer order: <defs>, content <g>, overlay <g>);
-  // the empty selection means the overlay <g> is empty and is ignored here.
-  const content = svg.querySelector('g')?.innerHTML ?? '';
+  // The content layer, tagged by the Renderer (other layers — grid, overlay — are empty here
+  // and deliberately excluded, so exports never carry the working grid or selection chrome).
+  const content = svg.querySelector('g[data-layer="content"]')?.innerHTML ?? '';
   // Painted first (SVG paints in document order) so it sits behind the drawing.
   const bg = background ? `<rect x="${x}" y="${y}" width="${w}" height="${h}" fill="${background}"/>` : '';
 

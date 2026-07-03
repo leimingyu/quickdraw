@@ -178,3 +178,33 @@ describe('ShapeTool', () => {
     expect({ x: b.x, y: b.y }).toEqual({ x: 210, y: 20 }); // group-mate moved too
   });
 });
+
+describe('ShapeTool snap-to-grid', () => {
+  it('quantizes a drag-drawn shape origin to the grid and size to whole cells', () => {
+    app.snapToGrid = true;
+    const tool = makeTool('rect');
+    drag(tool, { x: 7, y: 11 }, { x: 96, y: 74 });
+    const s = app.activeTab.nodes[0] as Shape;
+    expect(s.x).toBe(0);  // 7 → nearest line 0
+    expect(s.y).toBe(20); // 11 → nearest line 20
+    expect(s.w).toBe(80); // 89 → nearest cell multiple 80
+    expect(s.h).toBe(60); // 63 → nearest cell multiple 60
+  });
+
+  it('quantizes a click-created default shape to the grid', () => {
+    app.snapToGrid = true;
+    const tool = makeTool('rect');
+    click(tool, { x: 133, y: 97 }); // default 120×70 centered → x=73,y=62 → snap to 80,60
+    const s = app.activeTab.nodes[0] as Shape;
+    expect(s.x % 20).toBe(0);
+    expect(s.y % 20).toBe(0);
+    expect(s.w).toBe(120); // 120 already a cell multiple
+    expect(s.h).toBe(80);  // 70 → 80
+  });
+
+  it('leaves shapes unquantized when snap-to-grid is off', () => {
+    const tool = makeTool('rect');
+    drag(tool, { x: 7, y: 11 }, { x: 96, y: 74 });
+    expect(app.activeTab.nodes[0]).toMatchObject({ x: 7, y: 11, w: 89, h: 63 });
+  });
+});

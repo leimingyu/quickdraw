@@ -128,6 +128,28 @@ export function groupMembers(tab: Tab, node: Node): string[] {
   return tab.nodes.filter((n) => n.groupId === gid).map((n) => n.id);
 }
 
+/**
+ * Group the selected shapes into rigid units: one array per group (holding its selected
+ * members) and one singleton array per ungrouped selected shape. Units are emitted in the
+ * order their first member appears in `tab.nodes` (z-order). Connectors are ignored — align,
+ * distribute, and grid-snap operate on shapes; attached connectors follow their shapes.
+ */
+export function groupedShapeUnits(tab: Tab, ids: Set<string>): Shape[][] {
+  const units: Shape[][] = [];
+  const byGroup = new Map<string, Shape[]>();
+  for (const n of tab.nodes) {
+    if (!ids.has(n.id) || !isShape(n)) continue;
+    if (n.groupId) {
+      let bucket = byGroup.get(n.groupId);
+      if (!bucket) { bucket = []; byGroup.set(n.groupId, bucket); units.push(bucket); }
+      bucket.push(n);
+    } else {
+      units.push([n]);
+    }
+  }
+  return units;
+}
+
 /** Expand a selection to include every member of any group it touches. */
 export function expandToGroups(tab: Tab, ids: Set<string>): Set<string> {
   const groupIds = new Set<string>();

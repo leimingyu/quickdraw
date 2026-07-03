@@ -3,7 +3,7 @@ import { resetIds } from '../../src/util/id';
 import {
   createShape, createTab, createWorkspace, getActiveTab,
   findNode, addNode, removeNodes, reorder, cloneWorkspace,
-  groupNodes, ungroupNodes, expandToGroups, groupMembers,
+  groupNodes, ungroupNodes, expandToGroups, groupMembers, groupedShapeUnits,
 } from '../../src/model/document';
 import type { Shape } from '../../src/model/types';
 
@@ -112,5 +112,29 @@ describe('grouping', () => {
     ungroupNodes(tab, new Set([a.id]));
     expect(a.groupId).toBeUndefined();
     expect(b.groupId).toBeUndefined();
+  });
+
+  it('groupedShapeUnits collapses a group to one unit and keeps loose shapes separate', () => {
+    const tab = createTab();
+    const a = createShape('rect', 0, 0);
+    const b = createShape('rect', 50, 0);
+    const lone = createShape('rect', 200, 0);
+    [a, b, lone].forEach((s) => addNode(tab, s));
+    groupNodes(tab, new Set([a.id, b.id]));
+    const units = groupedShapeUnits(tab, new Set([a.id, b.id, lone.id]));
+    expect(units).toHaveLength(2); // {a,b} as one unit, {lone} as another
+    const groupUnit = units.find((u) => u.length === 2)!;
+    expect(new Set(groupUnit.map((s) => s.id))).toEqual(new Set([a.id, b.id]));
+    expect(units.find((u) => u.length === 1)![0].id).toBe(lone.id);
+  });
+
+  it('groupedShapeUnits ignores unselected shapes and connectors', () => {
+    const tab = createTab();
+    const a = createShape('rect', 0, 0);
+    const b = createShape('rect', 50, 0);
+    addNode(tab, a);
+    addNode(tab, b);
+    const units = groupedShapeUnits(tab, new Set([a.id])); // b not selected
+    expect(units).toEqual([[a]]);
   });
 });
