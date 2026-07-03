@@ -29,6 +29,7 @@ export class App {
   showGrid = false; // paint the canvas grid (a working aid; never baked into exports)
   snapToGrid = false; // quantize shape positions to the grid while dragging / drawing
   onRender?: () => void;
+  onCommit?: () => void; // fired after any change that alters the document (edit/undo/redo) — drives autosave
   onSave?: () => void;
   onCopyImage?: () => void; // ⌘⇧C — copy the diagram (or selection) to the OS clipboard as an image
   readonly renderer: Renderer;
@@ -89,6 +90,7 @@ export class App {
   commit(): void {
     this.history.commit(this.workspace);
     this.render();
+    this.onCommit?.();
   }
 
   undo(): void {
@@ -104,6 +106,7 @@ export class App {
     // else: fell back to the snapshot's active tab — keep its own stored camera.
     this.selection.clear();
     this.render();
+    this.onCommit?.();
   }
 
   redo(): void {
@@ -119,6 +122,7 @@ export class App {
     // else: fell back to the snapshot's active tab — keep its own stored camera.
     this.selection.clear();
     this.render();
+    this.onCommit?.();
   }
 
   /** Group the current selection into one movable unit. No-op for < 2 nodes. */

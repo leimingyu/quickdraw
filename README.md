@@ -48,7 +48,7 @@ QuickDraw runs in the browser, so it works the same on **Windows and macOS** (an
 - **Delete & reset** — remove the selection, or clear the whole canvas (both undoable).
 - **Undo / redo** — snapshot-based history.
 - **Pan & zoom** — the **View** menu (zoom in / out / reset), ⌘/Ctrl + scroll to zoom at the cursor, hold **Space** (or middle-mouse) and drag to pan.
-- **Autosave** — your work is saved to the browser (`localStorage`) and restored on reload.
+- **Autosave & crash recovery** — every change is mirrored to the browser (`localStorage`); if the tab crashes or you reload, QuickDraw offers a **Restore** bar to bring back your last session (or **Discard** it). It's never loaded silently, so a deliberate fresh start is never clobbered.
 
 ### Keyboard & mouse
 
@@ -94,8 +94,8 @@ src/
   render/     model → SVG (shape factory + renderer)
   tools/      interaction state machines (select, shape placement)
   history/    snapshot undo/redo
-  storage/    localStorage autosave
-  ui/         menu bar, tabs, properties panel, toast
+  io/         save/open (.json), SVG/PNG export, localStorage autosave
+  ui/         menu bar, tabs, properties panel, toast, restore bar
   app.ts      app state + event wiring · main.ts  bootstrap
 ```
 
@@ -105,7 +105,7 @@ The design spec and implementation plan live under [`docs/superpowers/`](docs/su
 
 ## Roadmap
 
-- **Shipped** — smart anchored connectors with editable + fixed (pinned) connection points and elbow routing; grouping; the style/properties panel; named tabs; save/open (`.json`) and export (vector SVG + **300-DPI PNG**); copy/cut/paste/duplicate; alignment guides + snapping; shape rotation; keyboard nudge & select-all.
+- **Shipped** — smart anchored connectors with editable + fixed (pinned) connection points and elbow routing; grouping; the style/properties panel; named tabs; save/open (`.json`) and export (vector SVG + **300-DPI PNG**) to a folder + filename you choose; copy/cut/paste/duplicate; alignment guides + snapping; shape rotation; keyboard nudge & select-all; autosave + crash recovery.
 - **Possible next** — per-kind edge clipping for connectors, drag-to-reorder tabs, obstacle-avoiding routing, and cross-tab drag.
 
 ## Tech stack
