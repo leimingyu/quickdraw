@@ -72,3 +72,22 @@ body { font: 14px system-ui, sans-serif; }
   font-size: 14px; box-shadow: 0 4px 12px rgba(0,0,0,0.25);
   opacity: 0; transform: translateY(10px); transition: opacity 0.25s, transform 0.25s; }
 .toast.toast-show { opacity: 1; transform: translateY(0); }
+
+/* ---- Touch support ---------------------------------------------------------
+   Critical: without touch-action:none a finger drag scrolls/zooms the PAGE and
+   the browser cancels the pointer stream, so shapes can't be dragged. This makes
+   finger drags on the canvas arrive as ordinary pointer events instead. */
+.canvas-host, .canvas-host svg { touch-action: none; }
+/* No 300ms tap delay / double-tap-zoom / grey tap-flash on chrome controls. */
+.menu-title, .menu-item, .tool-btn, .tab, .tab-close, .tab-add, .props button, .seg button {
+  touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
+/* On any touch-capable device, grow the primary controls to finger-sized targets
+   (mouse hit-tolerance is handled per-event in code, so this is chrome only). */
+@media (any-pointer: coarse) {
+  .tool-btn { width: 48px; height: 48px; }
+  .menu-title { padding: 9px 14px; }
+  .menu-item { padding: 11px 14px; }
+  .tab { padding: 9px 12px; }
+  .tab-close { padding: 4px 8px; font-size: 15px; }
+  .tab-add { padding: 7px 12px; }
+}

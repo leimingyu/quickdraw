@@ -239,7 +239,7 @@ export class SelectTool implements Tool {
   private hitNode(world: Point) {
     const shape = hitTest(this.app.activeTab.nodes.filter(isShape), world);
     if (shape) return shape;
-    const tol = 8 / this.app.activeTab.viewport.zoom;
+    const tol = this.app.grabTolerance(8);
     const connectors = this.app.activeTab.nodes.filter(isConnector);
     for (let i = connectors.length - 1; i >= 0; i--) {
       if (connectorHit(this.app.activeTab, connectors[i], world, tol)) return connectors[i];
@@ -282,7 +282,7 @@ export class SelectTool implements Tool {
   private handleAt(world: Point): Handle | null {
     const s = this.singleSelected();
     if (!s) return null;
-    const tol = 8 / this.app.activeTab.viewport.zoom; // screen-constant tolerance in world units
+    const tol = this.app.grabTolerance(8); // screen-constant, widened for touch/pen
     const pos = shapeHandlePositions(s); // rotated with the shape
     for (const [handle, p] of Object.entries(pos)) {
       if (Math.abs(world.x - p.x) <= tol && Math.abs(world.y - p.y) <= tol) return handle as Handle;
@@ -292,7 +292,7 @@ export class SelectTool implements Tool {
 
   private overRotationHandle(s: Shape, world: Point): boolean {
     const knob = rotationHandlePos(s, ROTATION_KNOB_DIST);
-    const tol = 8 / this.app.activeTab.viewport.zoom;
+    const tol = this.app.grabTolerance(8);
     return Math.abs(world.x - knob.x) <= tol && Math.abs(world.y - knob.y) <= tol;
   }
 }

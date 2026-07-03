@@ -26,7 +26,7 @@ export class EndpointDrag {
   private grab(conn: Connector, world: Point): boolean {
     const seg = connectorSegment(this.app.activeTab, conn);
     if (!seg) return false;
-    const tol = GRAB / this.app.activeTab.viewport.zoom; // screen-constant
+    const tol = this.app.grabTolerance(GRAB); // screen-constant, widened for touch/pen
     const near = (x: number, y: number) =>
       Math.abs(world.x - x) <= tol && Math.abs(world.y - y) <= tol;
     if (near(seg.x1, seg.y1)) { this.conn = conn; this.end = 'from'; this.moved = false; return true; }
