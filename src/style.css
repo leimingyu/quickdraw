@@ -19,6 +19,8 @@ body { font: 14px system-ui, sans-serif; }
 .menu-key { color: #9aa0a6; font-size: 12px; }
 .menu-item:hover .menu-key { color: #5b6168; }
 .menu-item.active { background: #3b82f6; color: #fff; }
+.menu-heading { padding: 6px 12px 2px; font-size: 11px; font-weight: 600; color: #9aa0a6;
+  text-transform: uppercase; letter-spacing: 0.04em; }
 .menu-sep { height: 1px; background: #eaeaea; margin: 4px 6px; }
 .palette-host { flex: 0 0 auto; }
 .toolpalette { display: flex; flex-direction: column; gap: 8px; padding: 10px 8px; height: 100%;

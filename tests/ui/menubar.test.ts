@@ -70,3 +70,36 @@ describe('menu bar', () => {
     expect(() => item('Copy to clipboard (PNG)').click()).not.toThrow();
   });
 });
+
+describe('export options (background + PNG resolution)', () => {
+  it('defaults to a transparent background and marks it active', () => {
+    title('File').click();
+    expect(app.exportBackground).toBe('transparent');
+    expect(item('Transparent').classList.contains('active')).toBe(true);
+    expect(item('White').classList.contains('active')).toBe(false);
+  });
+
+  it('choosing "White" sets a white export background and moves the active mark', () => {
+    title('File').click();
+    item('White').click();
+    expect(app.exportBackground).toBe('white');
+    expect(item('White').classList.contains('active')).toBe(true);
+    expect(item('Transparent').classList.contains('active')).toBe(false);
+  });
+
+  it('keeps the menu open after choosing an option (pick first, then export — no download-time modal)', () => {
+    title('File').click();
+    item('White').click();
+    expect(title('File').closest('.menu')!.classList.contains('open')).toBe(true);
+  });
+
+  it('defaults PNG resolution to 300 DPI and lets 1×/2×/3× override it', () => {
+    title('File').click();
+    expect(app.exportDpi).toBe(300);
+    expect(item('300 DPI').classList.contains('active')).toBe(true);
+    item('2×').click();
+    expect(app.exportDpi).toBe(192); // 2× = 192 DPI (96 px/in base)
+    expect(item('2×').classList.contains('active')).toBe(true);
+    expect(item('300 DPI').classList.contains('active')).toBe(false);
+  });
+});

@@ -1,15 +1,22 @@
 import type { App } from '../app';
+import type { ExportBackground } from '../model/types';
 import { serializeWorkspace, deserializeWorkspace } from './serialize';
-import { tabToSvgString } from '../render/exportSvg';
+import { tabToSvgString, EXPORT_PADDING } from '../render/exportSvg';
 import { isConnector, isAttached } from '../model/document';
 import { pngWithDpi } from './png';
 import { showToast } from '../ui/toast';
 
-// SVG user units are CSS px (96 per inch). Rasterizing at EXPORT_DPI/96 and tagging
-// the PNG with that DPI yields a print-quality 300-DPI image at its natural size.
+// SVG user units are CSS px (96 per inch). Rasterizing at dpi/96 and tagging the PNG
+// with that DPI yields an image that prints at its natural size; the default 300 DPI
+// is print quality, while 1×/2×/3× (96/192/288 DPI) are on-screen pixel multiples.
 const EXPORT_DPI = 300;
-const SCALE = EXPORT_DPI / 96; // = 3.125
 const JSON_TYPES = [{ description: 'QuickDraw drawing', accept: { 'application/json': ['.json'] } }];
+
+/** The SVG/canvas fill for an export background choice: 'white' → opaque white,
+ *  'transparent' → undefined so nothing is painted (the image stays clear). */
+export function backgroundFill(bg: ExportBackground): string | undefined {
+  return bg === 'white' ? '#ffffff' : undefined;
+}
 let fileHandle: any = null; // File System Access handle remembered for save-in-place
 
 /** Strip characters invalid in filenames and collapse whitespace to underscores;
@@ -112,24 +119,28 @@ function pickFileText(): Promise<string> {
 export function exportTabSvg(app: App): void {
   // Download directly inside the click gesture — no modal in between, which would
   // consume the page's user activation and make Chrome silently drop the download.
+  // The background choice is a persistent setting (File menu), read here — not a
+  // prompt at export time — for exactly that reason.
   const filename = exportFileName(app.activeTab.name, 'svg');
-  const svg = tabToSvgString(app.activeTab);
+  const svg = tabToSvgString(app.activeTab, EXPORT_PADDING, backgroundFill(app.exportBackground));
   downloadBlob(new Blob([svg], { type: 'image/svg+xml' }), filename);
   showToast(`Exported "${filename}" — check your Downloads folder`);
 }
 
-/** Rasterize an SVG document string to a DPI-tagged PNG blob at EXPORT_DPI. When
+/** Rasterize an SVG document string to a DPI-tagged PNG blob. `dpi` sets both the
+ *  pixel scale (dpi/96) and the pHYs tag, so the PNG prints at natural size. When
  *  `background` is given (e.g. '#ffffff'), it is painted as an opaque fill behind
  *  the drawing so the PNG isn't transparent; omit it to keep the background clear.
  *  Rejects if the SVG can't be decoded or the canvas 2D context is unavailable. */
-export function svgToPngBlob(svg: string, background?: string): Promise<Blob> {
+export function svgToPngBlob(svg: string, background?: string, dpi = EXPORT_DPI): Promise<Blob> {
+  const scale = dpi / 96; // SVG user units are CSS px (96/in)
   return new Promise((resolve, reject) => {
     const url = URL.createObjectURL(new Blob([svg], { type: 'image/svg+xml' }));
     const img = new Image();
     img.onload = () => {
       const canvas = document.createElement('canvas');
-      canvas.width = img.width * SCALE;
-      canvas.height = img.height * SCALE;
+      canvas.width = img.width * scale;
+      canvas.height = img.height * scale;
       const ctx = canvas.getContext('2d');
       if (!ctx) { URL.revokeObjectURL(url); reject(new Error('canvas 2D context unavailable')); return; }
       if (background) { // fill first so the drawing composites over an opaque background
@@ -140,7 +151,7 @@ export function svgToPngBlob(svg: string, background?: string): Promise<Blob> {
       URL.revokeObjectURL(url); // revoke only AFTER drawing: SVG images rasterize at draw time
       canvas.toBlob((blob) => {
         if (!blob) { reject(new Error('PNG encoding failed')); return; }
-        pngWithDpi(blob, EXPORT_DPI).then(resolve, reject);
+        pngWithDpi(blob, dpi).then(resolve, reject);
       }, 'image/png');
     };
     img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('SVG could not be decoded')); };
@@ -148,11 +159,21 @@ export function svgToPngBlob(svg: string, background?: string): Promise<Blob> {
   });
 }
 
+/** A short human label for a raster DPI: the 1×/2×/3× multiple when it's a clean
+ *  multiple of 96 (screen density), otherwise the plain DPI (e.g. the 300 default). */
+function scaleLabel(dpi: number): string {
+  return dpi % 96 === 0 ? `${dpi / 96}×` : `${dpi} DPI`;
+}
+
 export function exportTabPng(app: App): void {
   const filename = exportFileName(app.activeTab.name, 'png');
-  void svgToPngBlob(tabToSvgString(app.activeTab)).then((blob) => {
+  const dpi = app.exportDpi;
+  // Background is composited onto the canvas at raster time (the SVG stays transparent),
+  // so a transparent PNG drops onto any slide background; white bakes an opaque fill.
+  const fill = backgroundFill(app.exportBackground);
+  void svgToPngBlob(tabToSvgString(app.activeTab), fill, dpi).then((blob) => {
     downloadBlob(blob, filename);
-    showToast(`Exported "${filename}" (${EXPORT_DPI} DPI) — check your Downloads folder`);
+    showToast(`Exported "${filename}" (${scaleLabel(dpi)}) — check your Downloads folder`);
   }, () => {}); // canvas/SVG unavailable — nothing to export (matches prior silent no-op)
 }
 

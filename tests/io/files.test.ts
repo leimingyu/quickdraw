@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { safeFileName, exportFileName } from '../../src/io/files';
+import { safeFileName, exportFileName, backgroundFill } from '../../src/io/files';
 
 describe('safeFileName', () => {
   it('replaces filesystem-invalid characters with underscores', () => {
@@ -32,5 +32,14 @@ describe('exportFileName', () => {
   });
   it('falls back to "drawing" for a blank name', () => {
     expect(exportFileName('   ', 'svg')).toBe('drawing.svg');
+  });
+});
+
+describe('backgroundFill', () => {
+  it('maps "white" to an opaque hex fill', () => {
+    expect(backgroundFill('white')).toBe('#ffffff');
+  });
+  it('maps "transparent" to undefined so nothing is painted', () => {
+    expect(backgroundFill('transparent')).toBeUndefined();
   });
 });
