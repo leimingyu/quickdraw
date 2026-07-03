@@ -2,6 +2,7 @@ import type { App } from '../app';
 import type { Node, Routing, TextAlign } from '../model/types';
 import { isShape, isConnector, groupedShapeUnits, FONT_STACKS, DEFAULT_FONT_FAMILY, type StylePatch } from '../model/document';
 import type { AlignOp, DistributeOp } from '../model/align';
+import { THEME_GRID, STANDARD_COLORS } from './palette';
 
 // Compact inline glyphs (stroke = currentColor; bars filled). One per align/distribute op.
 const ALIGN_ITEMS: [AlignOp, string, string][] = [
@@ -33,11 +34,16 @@ export function mountProperties(app: App, container: HTMLElement): { update: () 
 
   let signature = '';
 
+  // At most one color popover is open at a time. Closing removes its listeners.
+  let activeAnchor: HTMLElement | null = null;
+  let closeActivePopover: (() => void) | null = null;
+
   const selected = (): Node[] => app.activeTab.nodes.filter((n) => app.selection.has(n.id));
 
   function update(): void {
     const nodes = selected();
     if (nodes.length === 0) {
+      closeActivePopover?.();
       dock.style.display = 'none';
       signature = '';
       return;
@@ -50,6 +56,7 @@ export function mountProperties(app: App, container: HTMLElement): { update: () 
   }
 
   function rebuild(nodes: Node[]): void {
+    closeActivePopover?.(); // a stale popover would be orphaned by replaceChildren
     dock.replaceChildren();
     const primary = nodes[0];
     const firstShape = nodes.find(isShape);
@@ -121,14 +128,129 @@ export function mountProperties(app: App, container: HTMLElement): { update: () 
 
   function colorRow(label: string, prop: string, value: string, make: (v: string) => StylePatch): HTMLElement {
     const row = labeledRow(label);
+    const control = document.createElement('div');
+    control.className = 'color-control';
+
+    // The native chip is unchanged: it holds the value and is the "More Colors…" OS picker.
     const input = document.createElement('input');
     input.type = 'color';
     input.value = toHex(value);
     input.dataset.prop = prop;
     input.addEventListener('input', () => app.restyle(make(input.value)));
     input.addEventListener('change', () => app.commitStyle());
-    row.appendChild(input);
+
+    // Applying a swatch (incl. 'none', which the native chip can't represent) commits directly.
+    const applyColor = (v: string): void => {
+      app.restyle(make(v));
+      app.commitStyle();
+      if (v !== 'none') input.value = toHex(v);
+    };
+
+    const caret = document.createElement('button');
+    caret.type = 'button';
+    caret.className = 'color-caret';
+    caret.dataset.colorTrigger = prop;
+    caret.title = `${label} — theme & standard colors`;
+    caret.setAttribute('aria-label', caret.title);
+    caret.innerHTML = '<svg viewBox="0 0 10 6" width="10" height="6" aria-hidden="true"><path d="M0 0h10L5 6z" fill="currentColor"/></svg>';
+    // Fill/line can be cleared to 'none' ("No Fill" / "No Line"); text color cannot.
+    const noneLabel = prop === 'fontColor' ? null : `No ${label}`;
+    caret.addEventListener('click', () => openColorPopover(control, input.value, noneLabel, applyColor));
+
+    control.append(input, caret);
+    row.appendChild(control);
     return row;
+  }
+
+  /** PowerPoint-style dropdown: No Fill/Line (optional), Theme Colors, Standard Colors, More Colors…. */
+  function openColorPopover(anchor: HTMLElement, current: string, noneLabel: string | null, onPick: (v: string) => void): void {
+    const reopeningSame = activeAnchor === anchor;
+    closeActivePopover?.();
+    if (reopeningSame) return; // second click on the same caret toggles it closed
+
+    const pop = document.createElement('div');
+    pop.className = 'color-popover';
+
+    const close = (): void => {
+      document.removeEventListener('pointerdown', onOutside, true);
+      document.removeEventListener('keydown', onKey, true);
+      pop.remove();
+      if (closeActivePopover === close) { closeActivePopover = null; activeAnchor = null; }
+    };
+    const onOutside = (e: Event): void => {
+      const t = e.target as HTMLElement;
+      if (!pop.contains(t) && !anchor.contains(t)) close();
+    };
+    const onKey = (e: KeyboardEvent): void => { if (e.key === 'Escape') close(); };
+
+    const swatch = (parent: HTMLElement, v: string): void => {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'swatch';
+      b.dataset.swatch = v;
+      b.style.background = v;
+      b.title = v;
+      if (v.toLowerCase() === current.toLowerCase()) b.classList.add('sel');
+      b.addEventListener('click', () => { onPick(v); close(); });
+      parent.appendChild(b);
+    };
+    const heading = (text: string): void => {
+      const h = document.createElement('div');
+      h.className = 'swatch-heading';
+      h.textContent = text;
+      pop.appendChild(h);
+    };
+    const grid = (): HTMLElement => {
+      const g = document.createElement('div');
+      g.className = 'swatch-grid';
+      pop.appendChild(g);
+      return g;
+    };
+
+    if (noneLabel) {
+      const none = document.createElement('button');
+      none.type = 'button';
+      none.className = 'color-none';
+      none.dataset.swatch = 'none';
+      none.textContent = noneLabel;
+      none.addEventListener('click', () => { onPick('none'); close(); });
+      pop.appendChild(none);
+    }
+
+    heading('Theme Colors');
+    const theme = grid();
+    for (const rowColors of THEME_GRID) for (const c of rowColors) swatch(theme, c);
+
+    heading('Standard Colors');
+    const std = grid();
+    for (const c of STANDARD_COLORS) swatch(std, c);
+
+    const more = document.createElement('button');
+    more.type = 'button';
+    more.className = 'color-more';
+    more.textContent = 'More Colors…';
+    more.addEventListener('click', () => {
+      close();
+      (anchor.querySelector('input[type="color"]') as HTMLInputElement | null)?.click();
+    });
+    pop.appendChild(more);
+
+    anchor.appendChild(pop);
+    // Fixed positioning escapes the props panel's overflow clip while staying a DOM
+    // descendant (so it's still discoverable via the panel). Anchor it under the control,
+    // clamped into the viewport; flip above if it would fall off the bottom.
+    const cr = anchor.getBoundingClientRect();
+    const pr = pop.getBoundingClientRect();
+    const left = Math.max(8, Math.min(cr.right - pr.width, window.innerWidth - pr.width - 8));
+    let top = cr.bottom + 4;
+    if (top + pr.height > window.innerHeight - 8) top = Math.max(8, cr.top - pr.height - 4);
+    pop.style.left = `${left}px`;
+    pop.style.top = `${top}px`;
+
+    document.addEventListener('pointerdown', onOutside, true);
+    document.addEventListener('keydown', onKey, true);
+    activeAnchor = anchor;
+    closeActivePopover = close;
   }
 
   function numberRow(label: string, prop: string, value: number, min: number, make: (v: number) => StylePatch): HTMLElement {

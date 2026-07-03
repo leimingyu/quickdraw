@@ -51,6 +51,25 @@ body { font: 14px system-ui, sans-serif; }
 .props button.active { background: #3b82f6; color: #fff; }
 .props input[type="number"] { width: 56px; }
 .props select { max-width: 110px; cursor: pointer; }
+/* Color control: native chip + caret that opens the theme/standard swatch popover. */
+.color-control { position: relative; display: inline-flex; align-items: center; gap: 4px; }
+.color-control input[type="color"] { width: 38px; height: 22px; padding: 0;
+  border: 1px solid #ccc; border-radius: 3px; background: none; cursor: pointer; }
+.color-control .color-caret { padding: 3px 4px; display: inline-flex; align-items: center;
+  color: #555; background: #f5f5f5; border: 1px solid #ccc; border-radius: 3px; }
+.color-control .color-caret:hover { background: #eef2ff; }
+.color-popover { position: fixed; z-index: 1100; background: #fff; border: 1px solid #ccc;
+  border-radius: 6px; box-shadow: 0 6px 20px rgba(0,0,0,0.18); padding: 8px; width: max-content;
+  display: flex; flex-direction: column; gap: 4px; }
+.swatch-heading { font-size: 11px; font-weight: 600; color: #444; margin: 2px 0; }
+.swatch-grid { display: grid; grid-template-columns: repeat(10, 16px); gap: 3px; }
+.color-popover .swatch { width: 16px; height: 16px; padding: 0; border: 1px solid rgba(0,0,0,0.25);
+  border-radius: 2px; cursor: pointer; }
+.color-popover .swatch:hover { outline: 2px solid #3b82f6; outline-offset: 1px; }
+.color-popover .swatch.sel { outline: 2px solid #1e1e1e; outline-offset: 1px; }
+.color-popover .color-none, .color-popover .color-more { padding: 4px 8px; font-size: 12px;
+  border: 1px solid #ddd; border-radius: 4px; background: #fafafa; cursor: pointer; text-align: center; }
+.color-popover .color-none:hover, .color-popover .color-more:hover { background: #eef2ff; }
 .seg { display: flex; gap: 2px; }
 .seg button { padding: 2px 6px; cursor: pointer; font-size: 12px; }
 .seg button.active { background: #3b82f6; color: #fff; }
