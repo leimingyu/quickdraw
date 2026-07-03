@@ -135,6 +135,10 @@ export class App {
     this.onCommit?.();
   }
 
+  /** Whether there is a prior/next snapshot to undo/redo — drives palette button state. */
+  canUndo(): boolean { return this.history.canUndo(); }
+  canRedo(): boolean { return this.history.canRedo(); }
+
   /** Group the current selection into one movable unit. No-op for < 2 nodes. */
   group(): void {
     const gid = groupNodes(this.activeTab, this.selection);
