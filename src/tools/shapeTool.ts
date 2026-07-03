@@ -2,6 +2,7 @@ import type { App } from '../app';
 import type { Shape, ShapeKind } from '../model/types';
 import { addNode, createShape, isShape } from '../model/document';
 import { hitTest, type Box, type Point } from '../model/geometry';
+import { snapValueToGrid, GRID_SIZE } from '../model/grid';
 import { DragMove } from './dragMove';
 import type { Tool } from './types';
 
@@ -18,6 +19,15 @@ function normalize(a: Point, b: Point): Box {
     w: Math.abs(b.x - a.x),
     h: Math.abs(b.y - a.y),
   };
+}
+
+/** Quantize a just-placed shape to the grid: origin to the nearest line, size to the nearest
+ *  whole cell (at least one cell). Called only when snap-to-grid is on. */
+function snapShapeToGrid(s: { x: number; y: number; w: number; h: number }): void {
+  s.x = snapValueToGrid(s.x);
+  s.y = snapValueToGrid(s.y);
+  s.w = Math.max(GRID_SIZE, snapValueToGrid(s.w));
+  s.h = Math.max(GRID_SIZE, snapValueToGrid(s.h));
 }
 
 /**
@@ -87,6 +97,7 @@ export class ShapeTool implements Tool {
         box.h = Math.max(box.h, MIN_SIZE);
         Object.assign(this.shape, box);
       }
+      if (this.app.snapToGrid) snapShapeToGrid(this.shape);
       this.app.selection = new Set([this.shape.id]);
       this.app.commit();
       this.start = null;

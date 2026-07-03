@@ -69,6 +69,11 @@ export function mountMenuBar(app: App, container: HTMLElement): void {
         { label: 'Zoom in', run: () => app.zoomBy(1.2) },
         { label: 'Zoom out', run: () => app.zoomBy(1 / 1.2) },
         { label: 'Reset to 100%', run: () => app.resetView() },
+        'separator',
+        // Grid + snap are independent checkable toggles (a radio item renders as a
+        // checkbox here — it flips its own boolean and keeps the menu open).
+        { radio: 'Show grid', active: () => app.showGrid, select: () => { app.showGrid = !app.showGrid; app.render(); } },
+        { radio: 'Snap to grid', active: () => app.snapToGrid, select: () => { app.snapToGrid = !app.snapToGrid; } },
       ],
     },
   ];

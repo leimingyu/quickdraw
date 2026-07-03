@@ -1,6 +1,21 @@
 import type { App } from '../app';
 import type { Node, Routing, TextAlign } from '../model/types';
-import { isShape, isConnector, FONT_STACKS, DEFAULT_FONT_FAMILY, type StylePatch } from '../model/document';
+import { isShape, isConnector, groupedShapeUnits, FONT_STACKS, DEFAULT_FONT_FAMILY, type StylePatch } from '../model/document';
+import type { AlignOp, DistributeOp } from '../model/align';
+
+// Compact inline glyphs (stroke = currentColor; bars filled). One per align/distribute op.
+const ALIGN_ITEMS: [AlignOp, string, string][] = [
+  ['left', 'Align left', '<line x1="4" y1="3" x2="4" y2="21"/><rect x="4" y="6" width="13" height="4" rx="1" fill="currentColor" stroke="none"/><rect x="4" y="14" width="8" height="4" rx="1" fill="currentColor" stroke="none"/>'],
+  ['hcenter', 'Align horizontal centers', '<line x1="12" y1="3" x2="12" y2="21"/><rect x="5" y="6" width="14" height="4" rx="1" fill="currentColor" stroke="none"/><rect x="8" y="14" width="8" height="4" rx="1" fill="currentColor" stroke="none"/>'],
+  ['right', 'Align right', '<line x1="20" y1="3" x2="20" y2="21"/><rect x="7" y="6" width="13" height="4" rx="1" fill="currentColor" stroke="none"/><rect x="12" y="14" width="8" height="4" rx="1" fill="currentColor" stroke="none"/>'],
+  ['top', 'Align top', '<line x1="3" y1="4" x2="21" y2="4"/><rect x="6" y="4" width="4" height="13" rx="1" fill="currentColor" stroke="none"/><rect x="14" y="4" width="4" height="8" rx="1" fill="currentColor" stroke="none"/>'],
+  ['vmiddle', 'Align vertical centers', '<line x1="3" y1="12" x2="21" y2="12"/><rect x="6" y="5" width="4" height="14" rx="1" fill="currentColor" stroke="none"/><rect x="14" y="8" width="4" height="8" rx="1" fill="currentColor" stroke="none"/>'],
+  ['bottom', 'Align bottom', '<line x1="3" y1="20" x2="21" y2="20"/><rect x="6" y="7" width="4" height="13" rx="1" fill="currentColor" stroke="none"/><rect x="14" y="12" width="4" height="8" rx="1" fill="currentColor" stroke="none"/>'],
+];
+const DISTRIBUTE_ITEMS: [DistributeOp, string, string][] = [
+  ['hspace', 'Distribute horizontally', '<rect x="3" y="5" width="3" height="14" rx="1" fill="currentColor" stroke="none"/><rect x="10.5" y="5" width="3" height="14" rx="1" fill="currentColor" stroke="none"/><rect x="18" y="5" width="3" height="14" rx="1" fill="currentColor" stroke="none"/>'],
+  ['vspace', 'Distribute vertically', '<rect x="5" y="3" width="14" height="3" rx="1" fill="currentColor" stroke="none"/><rect x="5" y="10.5" width="14" height="3" rx="1" fill="currentColor" stroke="none"/><rect x="5" y="18" width="14" height="3" rx="1" fill="currentColor" stroke="none"/>'],
+];
 
 /** Curated font families offered by the typography control (label, CSS stack). */
 const FONT_OPTIONS: [string, string][] = [
@@ -60,7 +75,48 @@ export function mountProperties(app: App, container: HTMLElement): { update: () 
       dock.appendChild(toggleRow('Arrow end', 'arrowEnd', firstConn.style.arrowEnd !== false, (v) => ({ arrowEnd: v })));
       dock.appendChild(routingRow(firstConn.style.routing ?? 'straight'));
     }
+    // Align needs ≥2 selected units, distribute ≥3 (a group counts as one rigid unit).
+    const units = groupedShapeUnits(app.activeTab, app.selection).length;
+    if (units >= 2) dock.appendChild(alignRow2());
+    if (units >= 3) dock.appendChild(distributeRow());
     dock.appendChild(zorderRow());
+  }
+
+  /** A stacked label + a wrapping row of icon buttons (used by align & distribute). */
+  function iconSeg(label: string, buttons: HTMLButtonElement[]): HTMLElement {
+    const row = document.createElement('div');
+    row.className = 'props-row props-arrange';
+    const span = document.createElement('span');
+    span.className = 'props-label';
+    span.textContent = label;
+    const seg = document.createElement('div');
+    seg.className = 'seg';
+    seg.append(...buttons);
+    row.append(span, seg);
+    return row;
+  }
+
+  function iconButton(icon: string, title: string, set: (b: HTMLButtonElement) => void, onClick: () => void): HTMLButtonElement {
+    const b = document.createElement('button');
+    b.title = title;
+    b.setAttribute('aria-label', title);
+    set(b);
+    b.innerHTML = `<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${icon}</svg>`;
+    b.addEventListener('click', onClick);
+    return b;
+  }
+
+  function alignRow2(): HTMLElement {
+    // `data-arrange` (not `data-align`, which the text-align row already uses) for object align.
+    const buttons = ALIGN_ITEMS.map(([op, title, icon]) =>
+      iconButton(icon, title, (b) => { b.dataset.arrange = op; }, () => app.align(op)));
+    return iconSeg('Align', buttons);
+  }
+
+  function distributeRow(): HTMLElement {
+    const buttons = DISTRIBUTE_ITEMS.map(([op, title, icon]) =>
+      iconButton(icon, title, (b) => { b.dataset.distribute = op; }, () => app.distribute(op)));
+    return iconSeg('Distribute', buttons);
   }
 
   function colorRow(label: string, prop: string, value: string, make: (v: string) => StylePatch): HTMLElement {

@@ -3,6 +3,7 @@ import type { Node, Shape, Connector, Endpoint } from '../model/types';
 import { hitTest, shapeInRect, resizeBox, resizeRotatedBox, shapeHandlePositions, rotationHandlePos, angleFromCenter, shapeCenter, ROTATION_KNOB_DIST, type Box, type Handle, type Point } from '../model/geometry';
 import { groupMembers, expandToGroups, isShape, isConnector } from '../model/document';
 import { computeSnap } from '../model/snapping';
+import { snapValueToGrid } from '../model/grid';
 import { connectorHit } from '../render/connector';
 import { portPoints, PORTS, type Port } from '../model/quickConnect';
 import { EndpointDrag } from './endpointDrag';
@@ -125,18 +126,30 @@ export class SelectTool implements Tool {
         minX = Math.min(minX, p.x + totalDx); minY = Math.min(minY, p.y + totalDy);
         maxX = Math.max(maxX, p.x + totalDx + s.w); maxY = Math.max(maxY, p.y + totalDy + s.h);
       }
-      const statics = this.app.activeTab.nodes
-        .filter(isShape)
-        .filter((s) => !this.app.selection.has(s.id))
-        .map((s) => ({ x: s.x, y: s.y, w: s.w, h: s.h }));
-      const tol = SNAP_PX / this.app.activeTab.viewport.zoom;
-      const snap = computeSnap({ x: minX, y: minY, w: maxX - minX, h: maxY - minY }, statics, tol);
+      // Snap-to-grid takes over when on: quantize the selection's top-left to the grid and
+      // shift everything by that single offset (relative layout preserved), no guide lines.
+      // Otherwise fall back to shape-to-shape edge/center snapping.
+      let snapDx = 0, snapDy = 0;
+      if (this.app.snapToGrid) {
+        snapDx = snapValueToGrid(minX) - minX;
+        snapDy = snapValueToGrid(minY) - minY;
+        this.app.snapGuides = [];
+      } else {
+        const statics = this.app.activeTab.nodes
+          .filter(isShape)
+          .filter((s) => !this.app.selection.has(s.id))
+          .map((s) => ({ x: s.x, y: s.y, w: s.w, h: s.h }));
+        const tol = SNAP_PX / this.app.activeTab.viewport.zoom;
+        const snap = computeSnap({ x: minX, y: minY, w: maxX - minX, h: maxY - minY }, statics, tol);
+        snapDx = snap.dx;
+        snapDy = snap.dy;
+        this.app.snapGuides = snap.guides;
+      }
       for (const s of selected) {
         const p = this.startPos.get(s.id)!;
-        s.x = p.x + totalDx + snap.dx;
-        s.y = p.y + totalDy + snap.dy;
+        s.x = p.x + totalDx + snapDx;
+        s.y = p.y + totalDy + snapDy;
       }
-      this.app.snapGuides = snap.guides;
       this.app.render();
       return;
     }

@@ -1,6 +1,7 @@
 import type { Shape, Tab, Viewport, Connector } from '../model/types';
 import { selectionBounds, shapeHandlePositions, rotationHandlePos, shapeCenter, ROTATION_KNOB_DIST, type Point } from '../model/geometry';
 import type { SnapGuide } from '../model/snapping';
+import { gridLinePositions } from '../model/grid';
 import { portPoints, PORTS } from '../model/quickConnect';
 import { isShape, isConnector } from '../model/document';
 import { shapeToSvg } from './shapes';
@@ -10,6 +11,7 @@ const NS = 'http://www.w3.org/2000/svg';
 
 export class Renderer {
   readonly svg: SVGSVGElement;
+  private grid: SVGGElement;
   private content: SVGGElement;
   private overlay: SVGGElement;
 
@@ -19,7 +21,9 @@ export class Renderer {
     this.svg.setAttribute('height', '100%');
     this.svg.style.display = 'block';
     this.svg.style.background = '#fafafa';
+    this.grid = document.createElementNS(NS, 'g');
     this.content = document.createElementNS(NS, 'g');
+    this.content.setAttribute('data-layer', 'content'); // stable handle for SVG export
     this.overlay = document.createElementNS(NS, 'g');
     const defs = document.createElementNS(NS, 'defs');
     const marker = document.createElementNS(NS, 'marker');
@@ -36,16 +40,19 @@ export class Renderer {
     marker.appendChild(arrow);
     defs.appendChild(marker);
     this.svg.appendChild(defs);
+    this.svg.appendChild(this.grid); // behind content, so shapes/overlay paint over it
     this.svg.appendChild(this.content);
     this.svg.appendChild(this.overlay);
     mount.appendChild(this.svg);
   }
 
-  render(tab: Tab, selection: Set<string>, highlightId?: string, guides: SnapGuide[] = [], hoverShapeId?: string): void {
+  render(tab: Tab, selection: Set<string>, highlightId?: string, guides: SnapGuide[] = [], hoverShapeId?: string, showGrid = false): void {
     const vp = tab.viewport;
     const transform = `translate(${vp.panX} ${vp.panY}) scale(${vp.zoom})`;
+    this.grid.setAttribute('transform', transform);
     this.content.setAttribute('transform', transform);
     this.overlay.setAttribute('transform', transform);
+    this.drawGrid(vp, showGrid);
     const connectors = tab.nodes
       .filter(isConnector)
       .map((c) => connectorToSvg(tab, c, selection.has(c.id)))
@@ -85,6 +92,32 @@ export class Renderer {
       dot.setAttribute('pointer-events', 'none');
       this.overlay.appendChild(dot);
     }
+  }
+
+  /** Light grid lines across the visible canvas (world-space, so they pan/zoom with content).
+   *  Non-interactive; cleared when the grid is off. Exports don't pass `showGrid`, so the grid
+   *  is a working aid only — never baked into a saved image. */
+  private drawGrid(vp: Viewport, showGrid: boolean): void {
+    this.grid.replaceChildren();
+    if (!showGrid) return;
+    const rect = this.svg.getBoundingClientRect();
+    const { xs, ys } = gridLinePositions(vp, rect.width, rect.height);
+    if (xs.length === 0 || ys.length === 0) return;
+    const y0 = ys[0], y1 = ys[ys.length - 1], x0 = xs[0], x1 = xs[xs.length - 1];
+    const w = String(1 / vp.zoom); // ~1 screen px regardless of zoom
+    const add = (x1v: number, y1v: number, x2v: number, y2v: number) => {
+      const line = document.createElementNS(NS, 'line');
+      line.setAttribute('x1', String(x1v));
+      line.setAttribute('y1', String(y1v));
+      line.setAttribute('x2', String(x2v));
+      line.setAttribute('y2', String(y2v));
+      line.setAttribute('stroke', '#e5e7eb');
+      line.setAttribute('stroke-width', w);
+      line.setAttribute('pointer-events', 'none');
+      this.grid.appendChild(line);
+    };
+    for (const x of xs) add(x, y0, x, y1);
+    for (const y of ys) add(x0, y, x1, y);
   }
 
   /** Alignment guide shown while a drag is snapped (rose, thin, non-interactive). */

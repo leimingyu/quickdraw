@@ -103,3 +103,33 @@ describe('export options (background + PNG resolution)', () => {
     expect(item('300 DPI').classList.contains('active')).toBe(false);
   });
 });
+
+describe('View menu grid toggles', () => {
+  it('offers Show grid / Snap to grid in the View menu, off by default', () => {
+    title('View').click();
+    expect(item('Show grid')).toBeTruthy();
+    expect(item('Snap to grid')).toBeTruthy();
+    expect(app.showGrid).toBe(false);
+    expect(app.snapToGrid).toBe(false);
+    expect(item('Show grid').classList.contains('active')).toBe(false);
+  });
+
+  it('toggling Show grid flips app.showGrid and its active mark, keeping the menu open', () => {
+    title('View').click();
+    item('Show grid').click();
+    expect(app.showGrid).toBe(true);
+    expect(item('Show grid').classList.contains('active')).toBe(true);
+    expect(title('View').closest('.menu')!.classList.contains('open')).toBe(true); // stays open
+    item('Show grid').click();
+    expect(app.showGrid).toBe(false);
+    expect(item('Show grid').classList.contains('active')).toBe(false);
+  });
+
+  it('toggling Snap to grid flips app.snapToGrid independently', () => {
+    title('View').click();
+    item('Snap to grid').click();
+    expect(app.snapToGrid).toBe(true);
+    expect(app.showGrid).toBe(false); // independent of Show grid
+    expect(item('Snap to grid').classList.contains('active')).toBe(true);
+  });
+});
