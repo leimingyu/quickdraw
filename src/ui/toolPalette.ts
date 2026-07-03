@@ -24,10 +24,40 @@ const ITEMS: Item[] = [
  * and the three connector types), MS-Paint / autodraw style. Returns `syncActive`
  * so the caller can highlight the current tool on every render.
  */
+// Undo/redo edit actions, pinned to the top of the palette (label, data-action, run,
+// enabled-predicate, icon). Kept as `.palette-action` (not `.tool-btn`) so tool-selection
+// logic and the tool count stay untouched.
+interface Action { name: 'undo' | 'redo'; label: string; run: (app: App) => void; can: (app: App) => boolean; icon: string }
+const ACTIONS: Action[] = [
+  { name: 'undo', label: 'Undo', run: (a) => a.undo(), can: (a) => a.canUndo(),
+    icon: '<path d="M3 10h11a5 5 0 0 1 0 10h-4"/><polyline points="7 6 3 10 7 14"/>' },
+  { name: 'redo', label: 'Redo', run: (a) => a.redo(), can: (a) => a.canRedo(),
+    icon: '<path d="M21 10H10a5 5 0 0 0 0 10h4"/><polyline points="17 6 21 10 17 14"/>' },
+];
+
 export function mountToolPalette(app: App, container: HTMLElement): { syncActive: () => void } {
   const bar = document.createElement('div');
   bar.className = 'toolpalette';
   const buttons: { item: Item; btn: HTMLButtonElement }[] = [];
+  const actions: { action: Action; btn: HTMLButtonElement }[] = [];
+
+  // Undo / redo first, then a divider, then the tools.
+  for (const action of ACTIONS) {
+    const btn = document.createElement('button');
+    btn.className = 'palette-action';
+    btn.dataset.action = action.name;
+    btn.title = action.label;
+    btn.setAttribute('aria-label', action.label);
+    btn.innerHTML =
+      `<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" ` +
+      `stroke-width="2" stroke-linejoin="round" stroke-linecap="round">${action.icon}</svg>`;
+    btn.addEventListener('click', () => action.run(app));
+    actions.push({ action, btn });
+    bar.appendChild(btn);
+  }
+  const divider = document.createElement('div');
+  divider.className = 'tool-divider';
+  bar.appendChild(divider);
 
   for (const item of ITEMS) {
     const btn = document.createElement('button');
@@ -56,6 +86,8 @@ export function mountToolPalette(app: App, container: HTMLElement): { syncActive
         (item.arrow === undefined || item.arrow === app.connectorArrow);
       btn.classList.toggle('active', active);
     }
+    // Grey out undo/redo when the history stack has nothing in that direction.
+    for (const { action, btn } of actions) btn.disabled = !action.can(app);
   };
 
   container.appendChild(bar);
