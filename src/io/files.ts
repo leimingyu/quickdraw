@@ -11,6 +11,8 @@ import { showToast } from '../ui/toast';
 // is print quality, while 1×/2×/3× (96/192/288 DPI) are on-screen pixel multiples.
 const EXPORT_DPI = 300;
 const JSON_TYPES = [{ description: 'QuickDraw drawing', accept: { 'application/json': ['.json'] } }];
+const SVG_TYPES = [{ description: 'SVG image', accept: { 'image/svg+xml': ['.svg'] } }];
+const PNG_TYPES = [{ description: 'PNG image', accept: { 'image/png': ['.png'] } }];
 
 /** The SVG/canvas fill for an export background choice: 'white' → opaque white,
  *  'transparent' → undefined so nothing is painted (the image stays clear). */
@@ -116,14 +118,50 @@ function pickFileText(): Promise<string> {
   });
 }
 
-export function exportTabSvg(app: App): void {
-  // Download directly inside the click gesture — no modal in between, which would
-  // consume the page's user activation and make Chrome silently drop the download.
+/** Offer the native "Save As" dialog (folder + editable filename) and return the
+ *  chosen file handle, or a sentinel telling the caller to fall back to a plain
+ *  browser download ('download') or to abort silently after a user cancel ('cancel').
+ *  MUST be called synchronously within a user gesture — the picker requires one. */
+async function pickSaveHandle(
+  suggestedName: string,
+  types: unknown,
+): Promise<{ handle: any } | 'download' | 'cancel'> {
+  if (!('showSaveFilePicker' in window)) return 'download';
+  try {
+    const handle = await (window as any).showSaveFilePicker({ suggestedName, types });
+    return { handle };
+  } catch (err) {
+    if ((err as Error).name === 'AbortError') return 'cancel'; // user dismissed the dialog
+    return 'download'; // picker unavailable/blocked (e.g. opened from file://) → download instead
+  }
+}
+
+/** Write a blob to a File System Access handle (save-in-place at the chosen path). */
+async function writeToHandle(handle: any, blob: Blob): Promise<void> {
+  const writable = await handle.createWritable();
+  await writable.write(blob);
+  await writable.close();
+}
+
+export async function exportTabSvg(app: App): Promise<void> {
   // The background choice is a persistent setting (File menu), read here — not a
-  // prompt at export time — for exactly that reason.
+  // prompt at export time — so nothing consumes the click's user activation before
+  // the save picker / download fires.
   const filename = exportFileName(app.activeTab.name, 'svg');
   const svg = tabToSvgString(app.activeTab, EXPORT_PADDING, backgroundFill(app.exportBackground));
-  downloadBlob(new Blob([svg], { type: 'image/svg+xml' }), filename);
+  const blob = new Blob([svg], { type: 'image/svg+xml' });
+  const dest = await pickSaveHandle(filename, SVG_TYPES); // let the user choose folder + name (#29)
+  if (dest === 'cancel') return;
+  if (dest !== 'download') {
+    try {
+      await writeToHandle(dest.handle, blob);
+      showToast(`Saved "${filename}"`);
+      return;
+    } catch {
+      // write failed after the pick — fall through so the export still lands somewhere
+    }
+  }
+  downloadBlob(blob, filename);
   showToast(`Exported "${filename}" — check your Downloads folder`);
 }
 
@@ -165,16 +203,33 @@ function scaleLabel(dpi: number): string {
   return dpi % 96 === 0 ? `${dpi / 96}×` : `${dpi} DPI`;
 }
 
-export function exportTabPng(app: App): void {
+export async function exportTabPng(app: App): Promise<void> {
   const filename = exportFileName(app.activeTab.name, 'png');
   const dpi = app.exportDpi;
   // Background is composited onto the canvas at raster time (the SVG stays transparent),
   // so a transparent PNG drops onto any slide background; white bakes an opaque fill.
   const fill = backgroundFill(app.exportBackground);
-  void svgToPngBlob(tabToSvgString(app.activeTab), fill, dpi).then((blob) => {
-    downloadBlob(blob, filename);
-    showToast(`Exported "${filename}" (${scaleLabel(dpi)}) — check your Downloads folder`);
-  }, () => {}); // canvas/SVG unavailable — nothing to export (matches prior silent no-op)
+  // Pick the destination FIRST, inside the click's user activation (#29): rasterizing
+  // the PNG is async and would outlive the gesture, so a picker opened afterward is rejected.
+  const dest = await pickSaveHandle(filename, PNG_TYPES);
+  if (dest === 'cancel') return;
+  let blob: Blob;
+  try {
+    blob = await svgToPngBlob(tabToSvgString(app.activeTab), fill, dpi);
+  } catch {
+    return; // canvas/SVG unavailable — nothing to export (matches prior silent no-op)
+  }
+  if (dest !== 'download') {
+    try {
+      await writeToHandle(dest.handle, blob);
+      showToast(`Saved "${filename}" (${scaleLabel(dpi)})`);
+      return;
+    } catch {
+      // write failed after the pick — fall through to a plain download
+    }
+  }
+  downloadBlob(blob, filename);
+  showToast(`Exported "${filename}" (${scaleLabel(dpi)}) — check your Downloads folder`);
 }
 
 /** The SVG document to export or copy as an image: just the selected nodes, cropped
