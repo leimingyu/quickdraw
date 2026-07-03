@@ -48,6 +48,7 @@ QuickDraw runs in the browser, so it works the same on **Windows and macOS** (an
 - **Delete & reset** — remove the selection, or clear the whole canvas (both undoable).
 - **Undo / redo** — snapshot-based history.
 - **Pan & zoom** — the **View** menu (zoom in / out / reset), ⌘/Ctrl + scroll to zoom at the cursor, hold **Space** (or middle-mouse) and drag to pan.
+- **Touch friendly** — on touch-screen laptops you can use your finger: **tap** to select, **drag** to move, drag a corner handle to resize or the ↻ knob to rotate, and **double-tap** to edit a label. Hit targets widen for touch so fat fingers can grab handles, and the page won't scroll while you draw. (Two-finger pan/pinch-zoom isn't wired up yet — use ⌘/Ctrl+scroll or Space-drag with a trackpad.)
 - **Autosave & crash recovery** — every change is mirrored to the browser (`localStorage`); if the tab crashes or you reload, QuickDraw offers a **Restore** bar to bring back your last session (or **Discard** it). It's never loaded silently, so a deliberate fresh start is never clobbered.
 
 ### Keyboard & mouse

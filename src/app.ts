@@ -9,6 +9,7 @@ import { History } from './history/history';
 import { zoomAt, hitTest, selectionBounds, type Box } from './model/geometry';
 
 const PASTE_STEP = 16; // world-unit offset applied to each paste so it doesn't cover the original
+const TOUCH_GRAB_FACTOR = 2; // touch/pen widen hit tolerances ~2× so fat fingers can grab handles
 
 class NoopTool implements Tool {
   onPointerDown(): void {}
@@ -28,6 +29,7 @@ export class App {
   exportDpi = 300; // raster resolution for PNG export; 96/192/288 = 1×/2×/3×, 300 = print default
   showGrid = false; // paint the canvas grid (a working aid; never baked into exports)
   snapToGrid = false; // quantize shape positions to the grid while dragging / drawing
+  coarsePointer = false; // the active pointer is touch/pen (not mouse) — widen finger hit targets
   onRender?: () => void;
   onCommit?: () => void; // fired after any change that alters the document (edit/undo/redo) — drives autosave
   onSave?: () => void;
@@ -63,6 +65,14 @@ export class App {
 
   get activeTab(): Tab {
     return getActiveTab(this.workspace);
+  }
+
+  /** Hit-test tolerance (world units) for grabbing resize handles, the rotation knob,
+   *  thin connectors, and connector endpoints. Widened for touch/pen so fingers can
+   *  grab them, and divided by zoom so the reach stays constant on screen. */
+  grabTolerance(basePx = 8): number {
+    const px = this.coarsePointer ? basePx * TOUCH_GRAB_FACTOR : basePx;
+    return px / this.activeTab.viewport.zoom;
   }
 
   registerTool(name: ToolName, tool: Tool): void {
@@ -540,6 +550,7 @@ export class App {
     const svg = this.renderer.svg;
     const sig = { signal: this.listeners.signal };
     svg.addEventListener('pointerdown', (ev) => {
+      this.coarsePointer = ev.pointerType !== 'mouse'; // touch/pen widen hit targets for this gesture
       svg.setPointerCapture(ev.pointerId);
       this.current.onPointerDown(this.world(ev), ev);
     }, sig);
@@ -556,7 +567,8 @@ export class App {
    *  Works in any tool (unlike the native `dblclick`, which render-on-press suppresses). */
   private detectDoubleClick(ev: PointerEvent): void {
     const now = performance.now();
-    const near = Math.abs(ev.clientX - this.lastTap.x) <= 6 && Math.abs(ev.clientY - this.lastTap.y) <= 6;
+    const tol = this.coarsePointer ? 16 : 6; // fingers land two taps farther apart than a mouse
+    const near = Math.abs(ev.clientX - this.lastTap.x) <= tol && Math.abs(ev.clientY - this.lastTap.y) <= tol;
     // A second up within 400ms and ~6px of the first = double-click. Reset after
     // firing so a triple-click (or a stray follow-up up) doesn't re-fire.
     if (this.lastTapAt !== 0 && now - this.lastTapAt <= 400 && near) {
