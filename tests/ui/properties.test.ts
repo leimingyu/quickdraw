@@ -181,3 +181,78 @@ describe('properties panel', () => {
     expect(document.activeElement).toBe(input); // still the same focused element
   });
 });
+
+describe('theme / standard color popover', () => {
+  const openPopover = (prop: string) => {
+    const trigger = dock().querySelector(`[data-color-trigger="${prop}"]`) as HTMLElement;
+    trigger.dispatchEvent(new Event('click', { bubbles: true }));
+    return dock().querySelector('.color-popover') as HTMLElement;
+  };
+
+  it('renders a swatch-popover caret next to each color input', () => {
+    const { a } = connected();
+    app.selection = new Set([a.id]);
+    panel.update();
+    expect(dock().querySelector('[data-color-trigger="stroke"]')).toBeTruthy();
+    expect(dock().querySelector('[data-color-trigger="fill"]')).toBeTruthy();
+    expect(dock().querySelector('[data-color-trigger="fontColor"]')).toBeTruthy();
+  });
+
+  it('opens a popover with theme + standard swatches when the caret is clicked', () => {
+    const { a } = connected();
+    app.selection = new Set([a.id]);
+    panel.update();
+    const pop = openPopover('fill');
+    expect(pop).toBeTruthy();
+    // 10 base + 50 tint/shade = 60 theme swatches, plus 10 standard = 70 hex swatches
+    expect(pop.querySelectorAll('[data-swatch]:not([data-swatch="none"])')).toHaveLength(70);
+  });
+
+  it('picking a theme swatch restyles every selected shape and commits', () => {
+    const { a, b } = connected();
+    app.selection = new Set([a.id, b.id]);
+    panel.update();
+    const commitSpy = vi.spyOn(app, 'commitStyle');
+    const pop = openPopover('fill');
+    (pop.querySelector('[data-swatch="#4472c4"]') as HTMLElement).dispatchEvent(new Event('click', { bubbles: true }));
+    expect(a.style.fill).toBe('#4472c4');
+    expect(b.style.fill).toBe('#4472c4');
+    expect(commitSpy).toHaveBeenCalled();
+  });
+
+  it('picking a standard swatch applies its hex', () => {
+    const { a } = connected();
+    app.selection = new Set([a.id]);
+    panel.update();
+    const pop = openPopover('stroke');
+    (pop.querySelector('[data-swatch="#ff0000"]') as HTMLElement).dispatchEvent(new Event('click', { bubbles: true }));
+    expect(a.style.stroke).toBe('#ff0000');
+  });
+
+  it('offers "No Fill" for fill/stroke but not for text color', () => {
+    const { a } = connected();
+    app.selection = new Set([a.id]);
+    panel.update();
+    const fillPop = openPopover('fill');
+    const noFill = fillPop.querySelector('[data-swatch="none"]') as HTMLElement;
+    expect(noFill).toBeTruthy();
+    noFill.dispatchEvent(new Event('click', { bubbles: true }));
+    expect(a.style.fill).toBe('none');
+    // text popover has no None option
+    const textPop = openPopover('fontColor');
+    expect(textPop.querySelector('[data-swatch="none"]')).toBeNull();
+  });
+
+  it('closes the popover after a pick and on Escape', () => {
+    const { a } = connected();
+    app.selection = new Set([a.id]);
+    panel.update();
+    const pop = openPopover('fill');
+    (pop.querySelector('[data-swatch="#ff0000"]') as HTMLElement).dispatchEvent(new Event('click', { bubbles: true }));
+    expect(dock().querySelector('.color-popover')).toBeNull();
+    // reopen, then Escape
+    openPopover('fill');
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
+    expect(dock().querySelector('.color-popover')).toBeNull();
+  });
+});
