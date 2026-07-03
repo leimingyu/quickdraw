@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { App } from '../../src/app';
 import { mountToolPalette } from '../../src/ui/toolPalette';
+import { addNode, createShape } from '../../src/model/document';
 
 let app: App;
 let host: HTMLElement;
@@ -62,5 +63,49 @@ describe('tool palette', () => {
 
   it('defaults to Select highlighted', () => {
     expect(btn('select').classList.contains('active')).toBe(true);
+  });
+});
+
+describe('undo / redo palette buttons', () => {
+  const action = (name: string) => host.querySelector<HTMLButtonElement>(`.palette-action[data-action="${name}"]`)!;
+
+  function commitAnEdit() {
+    addNode(app.activeTab, createShape('rect', 0, 0, 40, 40));
+    app.commit(); // snapshots history → canUndo becomes true
+  }
+
+  it('renders undo and redo action buttons without changing the tool count', () => {
+    expect(action('undo')).toBeTruthy();
+    expect(action('redo')).toBeTruthy();
+    expect(host.querySelectorAll('.tool-btn')).toHaveLength(11); // tools unchanged
+  });
+
+  it('disables both on a fresh document (nothing to undo/redo)', () => {
+    palette.syncActive();
+    expect(action('undo').disabled).toBe(true);
+    expect(action('redo').disabled).toBe(true);
+  });
+
+  it('enables undo after a committed change; clicking it reverts and enables redo', () => {
+    commitAnEdit();
+    palette.syncActive();
+    expect(action('undo').disabled).toBe(false);
+    expect(action('redo').disabled).toBe(true);
+
+    action('undo').click();
+    expect(app.activeTab.nodes).toHaveLength(0); // the added shape is gone
+
+    palette.syncActive();
+    expect(action('redo').disabled).toBe(false);
+    expect(action('undo').disabled).toBe(true);
+  });
+
+  it('clicking redo re-applies the undone change', () => {
+    commitAnEdit();
+    app.undo();
+    expect(app.activeTab.nodes).toHaveLength(0);
+    palette.syncActive();
+    action('redo').click();
+    expect(app.activeTab.nodes).toHaveLength(1);
   });
 });
