@@ -112,4 +112,28 @@ body { font: 14px system-ui, sans-serif; }
   .tab { padding: 9px 12px; }
   .tab-close { padding: 4px 8px; font-size: 15px; }
   .tab-add { padding: 7px 12px; }
+
+  /* Properties panel: the same enlargement, so every format/font/color control is
+     a comfortable finger target. Wider panel + wrapping rows keep enlarged controls
+     from crowding their labels. */
+  .props { width: 248px; gap: 12px; padding: 12px; }
+  .props-row { min-height: 44px; gap: 10px; flex-wrap: wrap; }
+  .props-label { font-size: 15px; }
+  .props button { min-height: 40px; padding: 8px 14px; font-size: 15px; border-radius: 6px; }
+  /* 16px input font stops mobile Safari from zooming the page on focus. */
+  .props input[type="number"] { width: 72px; height: 40px; font-size: 16px; padding: 4px 8px; }
+  .props select { min-height: 40px; max-width: 140px; font-size: 15px; padding: 4px 8px; }
+  .color-control input[type="color"] { width: 52px; height: 40px; }
+  .color-control .color-caret { min-width: 40px; min-height: 40px; padding: 6px 10px; }
+  .seg { gap: 4px; }
+  .seg button { min-height: 40px; padding: 8px 12px; font-size: 15px; }
+  .props-arrange .seg button { min-width: 44px; min-height: 44px; padding: 8px; }
+
+  /* Color popover: finger-sized swatches (grid stays 10 wide; the popover is
+     position:fixed and already clamps itself into the viewport). The explicit
+     min-height keeps swatches square — the general `.props button` rule above
+     also matches them (the popover is a DOM child of the panel). */
+  .swatch-grid { grid-template-columns: repeat(10, 30px); gap: 5px; }
+  .color-popover .swatch { width: 30px; height: 30px; min-height: 30px; }
+  .color-popover .color-none, .color-popover .color-more { padding: 10px 12px; font-size: 15px; }
 }
