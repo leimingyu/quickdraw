@@ -44,6 +44,10 @@ export interface ConnectorStyle {
 /** Connector path style. */
 export type Routing = 'straight' | 'elbow' | 'curved';
 
+/** Background painted behind an exported image: 'transparent' drops the diagram onto
+ *  any slide/page background; 'white' bakes an opaque white fill. */
+export type ExportBackground = 'transparent' | 'white';
+
 // An attached endpoint pins to a specific connection point when `anchor` is set
 // (fixed, PowerPoint-style); without it, the endpoint auto-snaps to the nearest
 // connection point facing the other end.

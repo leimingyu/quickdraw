@@ -30,4 +30,21 @@ describe('tabToSvgString', () => {
     expect(svg).toContain(`width="${400 + 2 * P}"`);
     expect(svg).toContain(`height="${300 + 2 * P}"`);
   });
+
+  it('paints an opaque background rect covering the viewBox when a background is given', () => {
+    const tab = createTab();
+    addNode(tab, createShape('rect', 100, 100, 200, 100)); // viewBox 80 80 240 140
+    const svg = tabToSvgString(tab, EXPORT_PADDING, '#ffffff');
+    expect(svg).toContain(
+      `<rect x="${100 - P}" y="${100 - P}" width="${200 + 2 * P}" height="${100 + 2 * P}" fill="#ffffff"/>`,
+    );
+  });
+
+  it('omits the background rect (stays transparent) by default', () => {
+    const tab = createTab();
+    addNode(tab, createShape('rect', 100, 100, 200, 100));
+    const svg = tabToSvgString(tab);
+    // the full-viewBox-sized fill rect must not be present (the content shape rect is w200 h100)
+    expect(svg).not.toContain(`width="${200 + 2 * P}" height="${100 + 2 * P}" fill="#ffffff"/>`);
+  });
 });

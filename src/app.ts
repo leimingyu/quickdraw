@@ -1,7 +1,7 @@
 import { Renderer } from './render/renderer';
 import { createWorkspace, getActiveTab, addNode, removeNodes, groupNodes, ungroupNodes, expandToGroups, pruneDanglingConnectors, restyleNodes, reorderSelection, isShape, addTab as addTabModel, removeTab as removeTabModel, renameTab as renameTabModel, type StylePatch } from './model/document';
 import { copyNodes, pasteNodes } from './model/copyPaste';
-import type { Node, Routing, Shape, Tab, Workspace } from './model/types';
+import type { ExportBackground, Node, Routing, Shape, Tab, Workspace } from './model/types';
 import type { SnapGuide } from './model/snapping';
 import type { Tool, ToolName } from './tools/types';
 import { History } from './history/history';
@@ -23,6 +23,8 @@ export class App {
   snapGuides: SnapGuide[] = []; // alignment guides shown during a snapped drag
   connectorRouting: Routing = 'straight'; // routing applied to newly drawn connectors
   connectorArrow = true; // whether newly drawn connectors get an end arrowhead (false = plain line)
+  exportBackground: ExportBackground = 'transparent'; // background baked into exported PNG/SVG files
+  exportDpi = 300; // raster resolution for PNG export; 96/192/288 = 1×/2×/3×, 300 = print default
   onRender?: () => void;
   onSave?: () => void;
   onCopyImage?: () => void; // ⌘⇧C — copy the diagram (or selection) to the OS clipboard as an image

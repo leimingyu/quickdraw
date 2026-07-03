@@ -2,7 +2,13 @@ import type { App } from '../app';
 import { saveWorkspace, openWorkspace, exportTabSvg, exportTabPng, copyTabPng } from '../io/files';
 import { isMac, formatShortcut } from './platform';
 
-type Item = { label: string; run: () => void; keys?: string } | 'separator';
+// A menu entry: a command button, a checkable radio option (a persistent choice
+// that leaves the menu open so you can pick then act), a non-interactive heading,
+// or a divider.
+type Command = { label: string; run: () => void; keys?: string };
+type Radio = { radio: string; active: () => boolean; select: () => void };
+type Heading = { heading: string };
+type Item = Command | Radio | Heading | 'separator';
 interface Menu { title: string; items: Item[] }
 
 /**
@@ -21,8 +27,20 @@ export function mountMenuBar(app: App, container: HTMLElement): void {
         { label: 'Open…', run: () => openWorkspace(app) },
         'separator',
         { label: 'Export as SVG', run: () => exportTabSvg(app) },
-        { label: 'Export as PNG (300 DPI)', run: () => exportTabPng(app) },
+        { label: 'Export as PNG', run: () => exportTabPng(app) },
         { label: 'Copy to clipboard (PNG)', run: () => void copyTabPng(app), keys: 'mod+shift+C' },
+        'separator',
+        // Background & resolution are persistent choices, not a prompt at export time:
+        // a modal in the click that triggers the download makes Chrome drop the save.
+        { heading: 'Export background' },
+        { radio: 'Transparent', active: () => app.exportBackground === 'transparent', select: () => { app.exportBackground = 'transparent'; } },
+        { radio: 'White', active: () => app.exportBackground === 'white', select: () => { app.exportBackground = 'white'; } },
+        'separator',
+        { heading: 'PNG resolution' },
+        { radio: '1×', active: () => app.exportDpi === 96, select: () => { app.exportDpi = 96; } },
+        { radio: '2×', active: () => app.exportDpi === 192, select: () => { app.exportDpi = 192; } },
+        { radio: '3×', active: () => app.exportDpi === 288, select: () => { app.exportDpi = 288; } },
+        { radio: '300 DPI', active: () => app.exportDpi === 300, select: () => { app.exportDpi = 300; } },
         'separator',
         { label: 'Clear canvas', run: () => { if (app.activeTab.nodes.length === 0 || confirm('Clear the whole canvas?')) app.resetTab(); } },
       ],
@@ -69,11 +87,37 @@ export function mountMenuBar(app: App, container: HTMLElement): void {
     const items = document.createElement('div');
     items.className = 'menu-items';
 
+    // Radio options highlight the current choice; re-derive their state after any pick.
+    const radios: { el: HTMLButtonElement; active: () => boolean }[] = [];
+    const refreshRadios = () => { for (const r of radios) r.el.classList.toggle('active', r.active()); };
+
     for (const it of menu.items) {
       if (it === 'separator') {
         const sep = document.createElement('div');
         sep.className = 'menu-sep';
         items.appendChild(sep);
+        continue;
+      }
+      if ('heading' in it) {
+        const h = document.createElement('div');
+        h.className = 'menu-heading';
+        h.textContent = it.heading;
+        items.appendChild(h);
+        continue;
+      }
+      if ('radio' in it) {
+        const b = document.createElement('button');
+        b.className = 'menu-item';
+        const label = document.createElement('span');
+        label.textContent = it.radio;
+        b.appendChild(label);
+        b.addEventListener('click', (e) => {
+          e.stopPropagation(); // keep the menu open: choose options, then click Export
+          it.select();
+          refreshRadios();
+        });
+        radios.push({ el: b, active: it.active });
+        items.appendChild(b);
         continue;
       }
       const b = document.createElement('button');
@@ -90,6 +134,7 @@ export function mountMenuBar(app: App, container: HTMLElement): void {
       b.addEventListener('click', () => { it.run(); closeAll(); });
       items.appendChild(b);
     }
+    refreshRadios(); // reflect the initial choices (transparent background, 300 DPI)
 
     title.addEventListener('click', (e) => {
       e.stopPropagation(); // don't let the document handler immediately re-close it

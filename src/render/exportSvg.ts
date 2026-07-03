@@ -5,8 +5,10 @@ import { contentBounds } from '../model/bounds';
 export const EXPORT_PADDING = 20;
 
 /** A self-contained SVG document string for the tab, cropped to content bounds
- *  + padding. Independent of (and does not mutate) the tab's live viewport. */
-export function tabToSvgString(tab: Tab, padding = EXPORT_PADDING): string {
+ *  + padding. Independent of (and does not mutate) the tab's live viewport. When
+ *  `background` is given (e.g. '#ffffff'), an opaque rect covering the whole
+ *  viewBox is painted behind the drawing; omit it to keep the SVG transparent. */
+export function tabToSvgString(tab: Tab, padding = EXPORT_PADDING, background?: string): string {
   const raw = contentBounds(tab) ?? { x: 0, y: 0, w: 400, h: 300 };
   const x = raw.x - padding;
   const y = raw.y - padding;
@@ -24,6 +26,8 @@ export function tabToSvgString(tab: Tab, padding = EXPORT_PADDING): string {
   // First <g> is the content layer (Renderer order: <defs>, content <g>, overlay <g>);
   // the empty selection means the overlay <g> is empty and is ignored here.
   const content = svg.querySelector('g')?.innerHTML ?? '';
+  // Painted first (SVG paints in document order) so it sits behind the drawing.
+  const bg = background ? `<rect x="${x}" y="${y}" width="${w}" height="${h}" fill="${background}"/>` : '';
 
-  return `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}" viewBox="${x} ${y} ${w} ${h}">${defs}<g>${content}</g></svg>`;
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}" viewBox="${x} ${y} ${w} ${h}">${defs}<g>${bg}${content}</g></svg>`;
 }
