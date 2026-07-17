@@ -3,6 +3,7 @@ import { App } from '../../src/app';
 import { ShapeTool } from '../../src/tools/shapeTool';
 import type { Point } from '../../src/model/geometry';
 import type { Shape, ShapeKind } from '../../src/model/types';
+import type { ToolName } from '../../src/tools/types';
 
 let app: App;
 beforeEach(() => {
@@ -13,7 +14,7 @@ beforeEach(() => {
 });
 afterEach(() => app.destroy());
 
-function makeTool(kind: ShapeKind): ShapeTool {
+function makeTool(kind: Extract<ShapeKind, ToolName>): ShapeTool {
   const tool = new ShapeTool(app, kind);
   app.registerTool(kind, tool);
   app.setTool(kind);
@@ -60,7 +61,7 @@ describe('ShapeTool', () => {
   });
 
   it('every shape kind returns to select after being created', () => {
-    const kinds: ShapeKind[] = ['rect', 'rounded', 'ellipse', 'diamond', 'triangle', 'text'];
+    const kinds: Extract<ShapeKind, ToolName>[] = ['rect', 'rounded', 'ellipse', 'diamond', 'triangle', 'text'];
     kinds.forEach((kind, i) => {
       const tool = makeTool(kind);
       expect(app.currentToolName).toBe(kind);

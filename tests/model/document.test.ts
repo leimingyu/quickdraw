@@ -58,6 +58,16 @@ describe('document model', () => {
     (copy.tabs[0].nodes[0] as Shape).x = 999;
     expect((getActiveTab(ws).nodes[0] as Shape).x).toBe(0);
   });
+
+  it('creates brace/bracket shapes as outline-only (fill none, stroke kept, no text)', () => {
+    for (const kind of ['brace-left', 'brace-right', 'bracket-left', 'bracket-right'] as const) {
+      const s = createShape(kind, 0, 0);
+      expect(s.kind).toBe(kind);
+      expect(s.style.fill).toBe('none');       // no fillable interior
+      expect(s.style.stroke).toBe('#1e1e1e');  // stroke kept, unlike the text kind
+      expect(s.text).toBeUndefined();          // no default label
+    }
+  });
 });
 
 describe('grouping', () => {
