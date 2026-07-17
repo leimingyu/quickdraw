@@ -61,7 +61,7 @@ describe('ShapeTool', () => {
   });
 
   it('every shape kind returns to select after being created', () => {
-    const kinds: Extract<ShapeKind, ToolName>[] = ['rect', 'rounded', 'ellipse', 'diamond', 'triangle', 'text'];
+    const kinds: Extract<ShapeKind, ToolName>[] = ['rect', 'rounded', 'ellipse', 'diamond', 'triangle', 'brace-left', 'brace-right', 'bracket-left', 'bracket-right', 'text'];
     kinds.forEach((kind, i) => {
       const tool = makeTool(kind);
       expect(app.currentToolName).toBe(kind);

@@ -37,4 +37,21 @@ describe('brace and bracket rendering', () => {
     expect(g.querySelector('path')).toBeTruthy();
     expect(g.querySelector('text')!.textContent).toContain('Group');
   });
+
+  it('braces pinch and brackets open toward the correct side', () => {
+    const d = (kind: any) =>
+      shapeToSvg(createShape(kind, 0, 0, 40, 80)).querySelector('path')!.getAttribute('d')!;
+    // 40-wide box: left variants reach x=0, right variants reach x=40, at mid-height y=40.
+    // \b-style boundary via a leading space or start so "20,40" can't match "0,40".
+    const hasPoint = (s: string, pt: string) => new RegExp(`(^|\\s)${pt}(\\s|$)`).test(s);
+    // Curly braces: pinch tip pokes to the far side.
+    expect(hasPoint(d('brace-left'), '0,40')).toBe(true);   // pinch at left edge
+    expect(hasPoint(d('brace-left'), '40,40')).toBe(false);
+    expect(hasPoint(d('brace-right'), '40,40')).toBe(true);  // pinch at right edge
+    expect(hasPoint(d('brace-right'), '0,40')).toBe(false);
+    // Square brackets: vertical spine sits on the opening's far side (arms extend the other way).
+    // bracket-left spine at x=0 (opens right); bracket-right spine at x=40 (opens left).
+    expect(d('bracket-left').startsWith('M40,0')).toBe(true);   // top arm terminates at right, spine at x=0
+    expect(d('bracket-right').startsWith('M0,0')).toBe(true);   // top arm terminates at left, spine at x=40
+  });
 });
