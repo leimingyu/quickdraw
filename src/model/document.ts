@@ -30,11 +30,18 @@ export function createConnector(from: Endpoint, to: Endpoint): Connector {
   return { id: uid('c'), kind: 'connector', from, to, style: { ...DEFAULT_CONNECTOR_STYLE } };
 }
 
+/** Kinds drawn as stroke-only outline glyphs with no fillable interior (braces, brackets). */
+const OUTLINE_ONLY: ReadonlySet<ShapeKind> = new Set([
+  'brace-left', 'brace-right', 'bracket-left', 'bracket-right',
+]);
+
 export function createShape(kind: ShapeKind, x: number, y: number, w = 120, h = 70): Shape {
   const style = { ...DEFAULT_STYLE };
   if (kind === 'text') {
     style.fill = 'none';
     style.stroke = 'none';
+  } else if (OUTLINE_ONLY.has(kind)) {
+    style.fill = 'none'; // outline glyph: keep the stroke, drop the fill
   }
   return { id: uid('s'), kind, x, y, w, h, style, text: kind === 'text' ? 'Text' : undefined };
 }

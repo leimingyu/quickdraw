@@ -1,6 +1,8 @@
 import type { Point } from '../model/geometry';
 
-export type ToolName = 'select' | 'rect' | 'rounded' | 'ellipse' | 'diamond' | 'triangle' | 'text' | 'arrow';
+export type ToolName =
+  | 'select' | 'rect' | 'rounded' | 'ellipse' | 'diamond' | 'triangle' | 'text'
+  | 'brace-left' | 'brace-right' | 'bracket-left' | 'bracket-right' | 'arrow';
 
 export interface Tool {
   onPointerDown(world: Point, ev: PointerEvent): void;

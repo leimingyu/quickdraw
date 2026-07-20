@@ -36,7 +36,8 @@ const app = new App(canvasHost);
 
 app.registerTool('select', new SelectTool(app));
 app.setTool('select');
-for (const kind of ['rect', 'rounded', 'ellipse', 'diamond', 'triangle', 'text'] as const) {
+for (const kind of ['rect', 'rounded', 'ellipse', 'diamond', 'triangle',
+                    'brace-left', 'brace-right', 'bracket-left', 'bracket-right', 'text'] as const) {
   app.registerTool(kind, new ShapeTool(app, kind));
 }
 app.registerTool('arrow', new ConnectorTool(app));

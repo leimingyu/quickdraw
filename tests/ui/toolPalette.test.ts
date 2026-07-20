@@ -24,13 +24,21 @@ const conn = (routing: string) => host.querySelector<HTMLButtonElement>(`.tool-b
 describe('tool palette', () => {
   it('renders the shapes, a Line, and the three connector types', () => {
     const btns = [...host.querySelectorAll<HTMLElement>('.tool-btn')];
-    expect(btns).toHaveLength(11);
-    expect(btns.slice(0, 7).map((b) => b.dataset.tool))
-      .toEqual(['select', 'rect', 'rounded', 'ellipse', 'diamond', 'triangle', 'text']);
-    const connectors = btns.slice(7);
+    expect(btns).toHaveLength(15);
+    expect(btns.slice(0, 11).map((b) => b.dataset.tool))
+      .toEqual(['select', 'rect', 'rounded', 'ellipse', 'diamond', 'triangle',
+                'brace-left', 'brace-right', 'bracket-left', 'bracket-right', 'text']);
+    const connectors = btns.slice(11);
     expect(connectors.map((b) => b.dataset.routing)).toEqual(['straight', 'straight', 'elbow', 'curved']);
     expect(connectors.map((b) => b.dataset.arrow)).toEqual(['false', 'true', 'true', 'true']);
-    expect(host.querySelectorAll('.tool-btn svg')).toHaveLength(11);
+    expect(host.querySelectorAll('.tool-btn svg')).toHaveLength(15);
+  });
+
+  it('the brace and bracket shortcuts select their tools', () => {
+    for (const kind of ['brace-left', 'brace-right', 'bracket-left', 'bracket-right']) {
+      btn(kind).click();
+      expect(app.currentToolName).toBe(kind);
+    }
   });
 
   it('the Line shortcut selects the connector tool with no arrowhead', () => {
@@ -77,7 +85,7 @@ describe('undo / redo palette buttons', () => {
   it('renders undo and redo action buttons without changing the tool count', () => {
     expect(action('undo')).toBeTruthy();
     expect(action('redo')).toBeTruthy();
-    expect(host.querySelectorAll('.tool-btn')).toHaveLength(11); // tools unchanged
+    expect(host.querySelectorAll('.tool-btn')).toHaveLength(15); // tools unchanged
   });
 
   it('disables both on a fresh document (nothing to undo/redo)', () => {

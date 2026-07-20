@@ -105,4 +105,12 @@ describe('serializeWorkspace / deserializeWorkspace', () => {
     const restored = deserializeWorkspace(serializeWorkspace(ws));
     expect(restored.activeTabId).toBe(restored.tabs[0].id);
   });
+
+  it('round-trips brace and bracket shape kinds', () => {
+    const ws = createWorkspace();
+    addNode(ws.tabs[0], createShape('brace-left', 0, 0, 40, 80));
+    addNode(ws.tabs[0], createShape('bracket-right', 60, 0, 40, 80));
+    const restored = deserializeWorkspace(serializeWorkspace(ws));
+    expect(restored.tabs[0].nodes.map((n) => n.kind)).toEqual(['brace-left', 'bracket-right']);
+  });
 });

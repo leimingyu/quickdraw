@@ -1,4 +1,6 @@
-export type ShapeKind = 'rect' | 'rounded' | 'ellipse' | 'diamond' | 'triangle' | 'text';
+export type ShapeKind =
+  | 'rect' | 'rounded' | 'ellipse' | 'diamond' | 'triangle' | 'text'
+  | 'brace-left' | 'brace-right' | 'bracket-left' | 'bracket-right';
 export type Anchor = 'top' | 'right' | 'bottom' | 'left' | 'center';
 /** A shape's 8 connection points (corners + edge midpoints), matching the resize handles. */
 export type ConnectionPoint = 'nw' | 'n' | 'ne' | 'e' | 'se' | 's' | 'sw' | 'w';
