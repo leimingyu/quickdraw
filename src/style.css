@@ -156,3 +156,35 @@ body { font: 14px system-ui, sans-serif; }
 .flyout-gallery { display: grid; grid-template-columns: repeat(5, 40px); gap: 6px;
   padding: 8px; background: #fff; border: 1px solid #ccc; border-radius: 6px;
   box-shadow: 0 8px 24px rgba(0,0,0,0.16); }
+
+/* PowerPoint-style ribbon row: Edit / Insert / Arrange groups. */
+.ribbon { display: flex; align-items: center; gap: 8px; padding: 4px 8px;
+  background: #f3f4f6; border-bottom: 1px solid #ddd; user-select: none; }
+.ribbon-group { display: flex; align-items: center; gap: 6px; }
+.ribbon-sep { width: 1px; align-self: stretch; background: #dcdcdc; margin: 2px 2px; }
+.ribbon-action { width: 34px; height: 34px; border-radius: 6px; border: 1px solid #dcdcdc;
+  background: #fff; color: #333; cursor: pointer; display: flex; align-items: center;
+  justify-content: center; padding: 0; }
+.ribbon-action:not(:disabled):hover { background: #eef2ff; }
+.ribbon-action:disabled { opacity: 0.4; cursor: default; }
+/* Split button: an icon face + a caret that opens the gallery. */
+.ribbon-split { display: inline-flex; align-items: stretch; }
+.ribbon .tool-btn { width: 34px; height: 34px; border-radius: 6px; border: 1px solid #dcdcdc;
+  background: #fff; color: #333; cursor: pointer; display: flex; align-items: center;
+  justify-content: center; padding: 0; box-shadow: none; }
+.ribbon .tool-btn:hover { background: #eef2ff; }
+.ribbon .tool-btn.active { background: #1e1e1e; color: #fff; border-color: #1e1e1e; }
+.ribbon-split .tool-btn { border-top-right-radius: 0; border-bottom-right-radius: 0; border-right: none; }
+.ribbon-caret { width: 16px; border: 1px solid #dcdcdc; border-top-left-radius: 0;
+  border-bottom-left-radius: 0; border-top-right-radius: 6px; border-bottom-right-radius: 6px;
+  background: #fff; color: #555; cursor: pointer; font-size: 10px; padding: 0; }
+.ribbon-caret:hover { background: #eef2ff; }
+.ribbon-cmd { padding: 6px 10px; border-radius: 6px; border: 1px solid #dcdcdc; background: #fff;
+  color: #333; cursor: pointer; font: inherit; white-space: nowrap; }
+.ribbon-cmd:not(:disabled):hover { background: #eef2ff; }
+.ribbon-cmd:disabled { opacity: 0.4; cursor: default; }
+/* Gallery icon buttons keep the same look as the ribbon's own tool buttons. */
+.flyout-gallery .tool-btn { width: 34px; height: 34px; border-radius: 6px; border: 1px solid #dcdcdc;
+  background: #fff; color: #333; cursor: pointer; display: flex; align-items: center;
+  justify-content: center; padding: 0; }
+.flyout-gallery .tool-btn:hover { background: #eef2ff; }
