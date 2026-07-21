@@ -3,6 +3,7 @@ import { App } from '../../src/app';
 import { mountRibbon } from '../../src/ui/ribbon';
 import { closeOpenPopup } from '../../src/ui/flyout';
 import { addNode, createShape } from '../../src/model/document';
+import type { Shape } from '../../src/model/types';
 
 let app: App;
 let host: HTMLElement;
@@ -70,6 +71,7 @@ describe('ribbon — Arrange group', () => {
     addNode(app.activeTab, a); addNode(app.activeTab, b);
     app.selection = new Set([a.id, b.id]);
     app.commit();
+    return { a, b };
   }
 
   it('Group and Ungroup are disabled with nothing selected, Group enabled with 2+', () => {
@@ -82,18 +84,22 @@ describe('ribbon — Arrange group', () => {
 
   it('the Group button groups the selection', () => {
     addTwoSelected();
+    ribbon.syncActive();
     cmd('group').click();
     const grouped = app.activeTab.nodes.filter((n) => 'groupId' in n && n.groupId);
     expect(grouped).toHaveLength(2);
   });
 
   it('the Align dropdown offers align + distribute ops that call App', () => {
-    addTwoSelected();
+    const { b } = addTwoSelected();
+    ribbon.syncActive();
     cmd('align').click();
     const left = [...document.querySelectorAll<HTMLButtonElement>('.flyout-item')]
-      .find((b) => b.textContent!.includes('Align left'))!;
+      .find((el) => el.textContent!.includes('Align left'))!;
     expect(left).toBeTruthy();
-    left.click(); // no throw = App.align invoked
+    left.click();
+    const node = app.activeTab.nodes.find((n) => n.id === b.id) as Shape;
+    expect(node.x).toBe(0);
   });
 });
 

@@ -137,6 +137,7 @@ export function mountRibbon(app: App, container: HTMLElement): { syncActive: () 
     alignBtn.disabled = count < 2;
   };
 
+  syncActive();
   return { syncActive };
 }
 
