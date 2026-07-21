@@ -18,6 +18,8 @@ afterEach(() => { closeOpenPopup(); app.destroy(); });
 
 const rightClick = () => canvasHost.dispatchEvent(
   new MouseEvent('contextmenu', { bubbles: true, cancelable: true, clientX: 5, clientY: 5 }));
+const rightClickAt = (x: number, y: number) => canvasHost.dispatchEvent(
+  new MouseEvent('contextmenu', { bubbles: true, cancelable: true, clientX: x, clientY: y }));
 const labels = () => [...document.querySelectorAll('.flyout-item .flyout-label')].map((b) => b.textContent!.replace('✓ ', ''));
 
 describe('context menu — selection contexts', () => {
@@ -54,8 +56,20 @@ describe('context menu — selection contexts', () => {
     const c = createConnector({ nodeId: s1.id }, { nodeId: s2.id });
     addNode(app.activeTab, s1); addNode(app.activeTab, s2); addNode(app.activeTab, c);
     app.selection = new Set([c.id]);
-    rightClick(); // clicks empty space (5,5) but selection stays → single menu on the connector
+    rightClickAt(220, 120); // right-clicks the connector line → single connector menu
     expect(labels()).not.toContain('Edit text');
+    expect(labels()).toContain('Delete');
+  });
+});
+
+describe('context menu — deselection', () => {
+  it('right-clicking empty space clears the selection and shows the canvas menu', () => {
+    const a = createShape('rect', 100, 100, 40, 40);
+    addNode(app.activeTab, a);
+    app.selection = new Set([a.id]);
+    rightClickAt(5, 5); // empty space, away from the shape
+    expect(app.selection.size).toBe(0);
+    expect(labels()).toEqual(['Paste', 'Select all', 'Show grid', 'Snap to grid']);
   });
 });
 

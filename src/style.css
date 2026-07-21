@@ -90,7 +90,8 @@ body { font: 14px system-ui, sans-serif; }
    finger drags on the canvas arrive as ordinary pointer events instead. */
 .canvas-host, .canvas-host svg { touch-action: none; }
 /* No 300ms tap delay / double-tap-zoom / grey tap-flash on chrome controls. */
-.menu-title, .menu-item, .tool-btn, .tab, .tab-close, .tab-add, .props button, .seg button {
+.menu-title, .menu-item, .tool-btn, .tab, .tab-close, .tab-add, .props button, .seg button,
+.ribbon-action, .ribbon-caret, .ribbon-cmd {
   touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
 /* On any touch-capable device, grow the primary controls to finger-sized targets
    (mouse hit-tolerance is handled per-event in code, so this is chrome only). */
@@ -177,3 +178,13 @@ body { font: 14px system-ui, sans-serif; }
   background: #fff; color: #333; cursor: pointer; display: flex; align-items: center;
   justify-content: center; padding: 0; }
 .flyout-gallery .tool-btn:hover { background: #eef2ff; }
+
+/* Finger-sized ribbon controls on touch devices — placed after the ribbon's base
+   rules so it out-orders their scoped sizing. Restores the 48px-class touch target
+   the retired tool palette gave undo/redo. The .ribbon row has no fixed height, so
+   taller controls grow it naturally. */
+@media (any-pointer: coarse) {
+  .ribbon-action, .ribbon .tool-btn, .flyout-gallery .tool-btn { width: 44px; height: 44px; }
+  .ribbon-caret { width: 22px; }
+  .ribbon-cmd { padding: 12px 14px; }
+}

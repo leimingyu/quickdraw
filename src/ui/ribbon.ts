@@ -99,7 +99,7 @@ export function mountRibbon(app: App, container: HTMLElement): { syncActive: () 
   const arrangeGroup = groupEl();
   const groupBtn = cmdBtn('group', 'Group', () => app.group());
   const ungroupBtn = cmdBtn('ungroup', 'Ungroup', () => app.ungroup());
-  const orderBtn = cmdBtn('order', 'Order ▾', () => {}, true);
+  const orderBtn = cmdBtn('order', 'Order ▾', () => {});
   orderBtn.addEventListener('click', (e) => {
     e.stopPropagation();
     openMenu([
@@ -107,7 +107,7 @@ export function mountRibbon(app: App, container: HTMLElement): { syncActive: () 
       { label: 'Send to back', run: () => app.sendToBack() },
     ], { anchor: orderBtn, side: 'below' });
   });
-  const alignBtn = cmdBtn('align', 'Align ▾', () => {}, true);
+  const alignBtn = cmdBtn('align', 'Align ▾', () => {});
   alignBtn.addEventListener('click', (e) => {
     e.stopPropagation();
     openMenu(alignMenuEntries(app), { anchor: alignBtn, side: 'below' });
@@ -157,9 +157,9 @@ function actionBtn(name: 'undo' | 'redo', label: string, icon: string, run: () =
   return b;
 }
 
-function cmdBtn(name: string, label: string, run: () => void, dropdown = false): HTMLButtonElement {
+function cmdBtn(name: string, label: string, run: () => void): HTMLButtonElement {
   const b = document.createElement('button');
-  b.className = dropdown ? 'ribbon-cmd ribbon-cmd-dd' : 'ribbon-cmd';
+  b.className = 'ribbon-cmd';
   b.dataset.cmd = name;
   b.textContent = label;
   b.addEventListener('click', run);

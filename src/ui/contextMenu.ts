@@ -1,8 +1,9 @@
 import type { App } from '../app';
 import type { Node, Shape } from '../model/types';
 import { openMenu, type MenuEntry } from './flyout';
-import { hitTest } from '../model/geometry';
-import { isShape, expandToGroups } from '../model/document';
+import { hitTest, type Point } from '../model/geometry';
+import { isShape, isConnector, expandToGroups } from '../model/document';
+import { connectorHit } from '../render/connector';
 
 /** Attach the right-click context menu to the canvas host. Suppresses the browser's
  *  native menu and opens one of three menus (empty / single / multi) based on what is
@@ -11,11 +12,15 @@ export function mountContextMenu(app: App, canvasHost: HTMLElement): void {
   canvasHost.addEventListener('contextmenu', (e) => {
     e.preventDefault();
     const world = app.renderer.toWorld(e.clientX, e.clientY, app.activeTab.viewport);
-    const hit = hitTest(app.activeTab.nodes.filter(isShape), world);
+    const hit = hitNode(app, world);
 
     if (hit && !app.selection.has(hit.id)) {
       // Right-click acts on what's under the cursor: select it (whole group), like PPT.
       app.selection = expandToGroups(app.activeTab, new Set([hit.id]));
+      app.render();
+    } else if (!hit && app.selection.size > 0) {
+      // Right-click on empty canvas deselects — PowerPoint behavior.
+      app.selection.clear();
       app.render();
     }
 
@@ -27,6 +32,20 @@ export function mountContextMenu(app: App, canvasHost: HTMLElement): void {
 
     openMenu(entries, { x: e.clientX, y: e.clientY });
   });
+}
+
+/** Hit-test a shape (topmost) or, failing that, a connector line — mirroring the
+ *  select tool, so a right-click on any object acts on it and only a truly empty
+ *  click clears the selection. */
+function hitNode(app: App, world: Point): Node | undefined {
+  const shape = hitTest(app.activeTab.nodes.filter(isShape), world);
+  if (shape) return shape;
+  const tol = app.grabTolerance(8);
+  const connectors = app.activeTab.nodes.filter(isConnector);
+  for (let i = connectors.length - 1; i >= 0; i--) {
+    if (connectorHit(app.activeTab, connectors[i], world, tol)) return connectors[i];
+  }
+  return undefined;
 }
 
 function canvasMenu(app: App): MenuEntry[] {
