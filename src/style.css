@@ -137,3 +137,22 @@ body { font: 14px system-ui, sans-serif; }
   .color-popover .swatch { width: 30px; height: 30px; min-height: 30px; }
   .color-popover .color-none, .color-popover .color-more { padding: 10px 12px; font-size: 15px; }
 }
+
+/* Shared floating popup: ribbon galleries/dropdowns + the right-click context menu. */
+.flyout { position: fixed; z-index: 1200; }
+.flyout-menu { position: fixed; background: #fff; border: 1px solid #ccc; border-radius: 6px;
+  padding: 4px; min-width: 180px; box-shadow: 0 8px 24px rgba(0,0,0,0.16); }
+.flyout-item { display: flex; align-items: center; justify-content: space-between; gap: 24px;
+  width: 100%; text-align: left; padding: 6px 12px; background: none; border: none; font: inherit;
+  cursor: pointer; border-radius: 4px; white-space: nowrap; }
+.flyout-item:hover:not(:disabled) { background: #eff6ff; }
+.flyout-item:disabled { color: #b8bcc2; cursor: default; }
+.flyout-key { color: #9aa0a6; font-size: 12px; }
+.flyout-caret { color: #9aa0a6; margin-left: auto; }
+.flyout-heading { padding: 6px 12px 2px; font-size: 11px; font-weight: 600; color: #9aa0a6;
+  text-transform: uppercase; letter-spacing: 0.04em; }
+.flyout-sep { height: 1px; background: #eaeaea; margin: 4px 6px; }
+/* Icon gallery inside a flyout (Shapes / Arrow). */
+.flyout-gallery { display: grid; grid-template-columns: repeat(5, 40px); gap: 6px;
+  padding: 8px; background: #fff; border: 1px solid #ccc; border-radius: 6px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.16); }
