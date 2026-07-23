@@ -1,6 +1,7 @@
 import { App } from './app';
 import { mountMenuBar } from './ui/menubar';
-import { mountToolPalette } from './ui/toolPalette';
+import { mountRibbon } from './ui/ribbon';
+import { mountContextMenu } from './ui/contextMenu';
 import { saveWorkspace, copyTabPng } from './io/files';
 import { mountProperties } from './ui/properties';
 import { mountTabs } from './ui/tabs';
@@ -17,13 +18,11 @@ const tabStripHost = document.createElement('div');
 const toolbarHost = document.createElement('div');
 const bodyHost = document.createElement('div');
 bodyHost.className = 'app-body';
-const paletteHost = document.createElement('div');
-paletteHost.className = 'palette-host';
 const canvasHost = document.createElement('div');
 canvasHost.className = 'canvas-host';
 const propsHost = document.createElement('div');
 propsHost.className = 'props-host';
-bodyHost.append(paletteHost, canvasHost, propsHost);
+bodyHost.append(canvasHost, propsHost);
 root.append(tabStripHost, toolbarHost, bodyHost);
 
 // Grab any crash-recovery draft BEFORE the app can autosave over it, so a browser
@@ -43,11 +42,12 @@ for (const kind of ['rect', 'rounded', 'ellipse', 'diamond', 'triangle',
 app.registerTool('arrow', new ConnectorTool(app));
 
 mountMenuBar(app, toolbarHost);
-const palette = mountToolPalette(app, paletteHost);
+const ribbon = mountRibbon(app, toolbarHost);
+mountContextMenu(app, canvasHost);
 
 const tabs = mountTabs(app, tabStripHost);
 const panel = mountProperties(app, propsHost);
-app.onRender = () => { panel.update(); tabs.update(); palette.syncActive(); };
+app.onRender = () => { panel.update(); tabs.update(); ribbon.syncActive(); };
 app.onSave = () => saveWorkspace(app);
 app.onCopyImage = () => void copyTabPng(app);
 

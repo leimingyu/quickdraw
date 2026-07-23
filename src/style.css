@@ -22,17 +22,6 @@ body { font: 14px system-ui, sans-serif; }
 .menu-heading { padding: 6px 12px 2px; font-size: 11px; font-weight: 600; color: #9aa0a6;
   text-transform: uppercase; letter-spacing: 0.04em; }
 .menu-sep { height: 1px; background: #eaeaea; margin: 4px 6px; }
-.palette-host { flex: 0 0 auto; }
-.toolpalette { display: flex; flex-direction: column; gap: 8px; padding: 10px 8px; height: 100%;
-  box-sizing: border-box; background: #f3f4f6; border-right: 1px solid #ddd; align-items: center; }
-.tool-btn, .palette-action { width: 40px; height: 40px; border-radius: 50%; border: 1px solid #dcdcdc;
-  background: #fff; color: #333; cursor: pointer; display: flex; align-items: center; justify-content: center;
-  padding: 0; box-shadow: 0 1px 2px rgba(0,0,0,0.08); }
-.tool-btn:hover, .palette-action:not(:disabled):hover { background: #eef2ff; }
-.tool-btn.active { background: #1e1e1e; color: #fff; border-color: #1e1e1e; }
-.palette-action:disabled { opacity: 0.4; cursor: default; box-shadow: none; }
-/* Separates the undo/redo actions from the drawing tools in the palette column. */
-.tool-divider { flex: 0 0 auto; width: 24px; height: 1px; background: #dcdcdc; margin: 2px 0; }
 .canvas-host { flex: 1; min-height: 0; }
 /* Inline shape-label editor: a multi-line textarea overlaying the shape box. */
 .text-editor { box-sizing: border-box; margin: 0; padding: 2px 4px; border: 1px solid #3b82f6;
@@ -101,12 +90,13 @@ body { font: 14px system-ui, sans-serif; }
    finger drags on the canvas arrive as ordinary pointer events instead. */
 .canvas-host, .canvas-host svg { touch-action: none; }
 /* No 300ms tap delay / double-tap-zoom / grey tap-flash on chrome controls. */
-.menu-title, .menu-item, .tool-btn, .palette-action, .tab, .tab-close, .tab-add, .props button, .seg button {
+.menu-title, .menu-item, .tool-btn, .tab, .tab-close, .tab-add, .props button, .seg button,
+.ribbon-action, .ribbon-caret, .ribbon-cmd {
   touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
 /* On any touch-capable device, grow the primary controls to finger-sized targets
    (mouse hit-tolerance is handled per-event in code, so this is chrome only). */
 @media (any-pointer: coarse) {
-  .tool-btn, .palette-action { width: 48px; height: 48px; }
+  .tool-btn { width: 48px; height: 48px; }
   .menu-title { padding: 9px 14px; }
   .menu-item { padding: 11px 14px; }
   .tab { padding: 9px 12px; }
@@ -136,4 +126,65 @@ body { font: 14px system-ui, sans-serif; }
   .swatch-grid { grid-template-columns: repeat(10, 30px); gap: 5px; }
   .color-popover .swatch { width: 30px; height: 30px; min-height: 30px; }
   .color-popover .color-none, .color-popover .color-more { padding: 10px 12px; font-size: 15px; }
+}
+
+/* Shared floating popup: ribbon galleries/dropdowns + the right-click context menu. */
+.flyout { position: fixed; z-index: 1200; }
+.flyout-menu { position: fixed; background: #fff; border: 1px solid #ccc; border-radius: 6px;
+  padding: 4px; min-width: 180px; box-shadow: 0 8px 24px rgba(0,0,0,0.16); }
+.flyout-item { display: flex; align-items: center; justify-content: space-between; gap: 24px;
+  width: 100%; text-align: left; padding: 6px 12px; background: none; border: none; font: inherit;
+  cursor: pointer; border-radius: 4px; white-space: nowrap; }
+.flyout-item:hover:not(:disabled) { background: #eff6ff; }
+.flyout-item:disabled { color: #b8bcc2; cursor: default; }
+.flyout-key { color: #9aa0a6; font-size: 12px; }
+.flyout-caret { color: #9aa0a6; margin-left: auto; }
+.flyout-heading { padding: 6px 12px 2px; font-size: 11px; font-weight: 600; color: #9aa0a6;
+  text-transform: uppercase; letter-spacing: 0.04em; }
+.flyout-sep { height: 1px; background: #eaeaea; margin: 4px 6px; }
+/* Icon gallery inside a flyout (Shapes / Arrow). */
+.flyout-gallery { display: grid; grid-template-columns: repeat(5, 40px); gap: 6px;
+  padding: 8px; background: #fff; border: 1px solid #ccc; border-radius: 6px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.16); }
+
+/* PowerPoint-style ribbon row: Edit / Insert / Arrange groups. */
+.ribbon { display: flex; align-items: center; gap: 8px; padding: 4px 8px;
+  background: #f3f4f6; border-bottom: 1px solid #ddd; user-select: none; }
+.ribbon-group { display: flex; align-items: center; gap: 6px; }
+.ribbon-sep { width: 1px; align-self: stretch; background: #dcdcdc; margin: 2px 2px; }
+.ribbon-action { width: 34px; height: 34px; border-radius: 6px; border: 1px solid #dcdcdc;
+  background: #fff; color: #333; cursor: pointer; display: flex; align-items: center;
+  justify-content: center; padding: 0; }
+.ribbon-action:not(:disabled):hover { background: #eef2ff; }
+.ribbon-action:disabled { opacity: 0.4; cursor: default; }
+/* Split button: an icon face + a caret that opens the gallery. */
+.ribbon-split { display: inline-flex; align-items: stretch; }
+.ribbon .tool-btn { width: 34px; height: 34px; border-radius: 6px; border: 1px solid #dcdcdc;
+  background: #fff; color: #333; cursor: pointer; display: flex; align-items: center;
+  justify-content: center; padding: 0; box-shadow: none; }
+.ribbon .tool-btn:hover { background: #eef2ff; }
+.ribbon .tool-btn.active { background: #1e1e1e; color: #fff; border-color: #1e1e1e; }
+.ribbon-split .tool-btn { border-top-right-radius: 0; border-bottom-right-radius: 0; border-right: none; }
+.ribbon-caret { width: 16px; border: 1px solid #dcdcdc; border-top-left-radius: 0;
+  border-bottom-left-radius: 0; border-top-right-radius: 6px; border-bottom-right-radius: 6px;
+  background: #fff; color: #555; cursor: pointer; font-size: 10px; padding: 0; }
+.ribbon-caret:hover { background: #eef2ff; }
+.ribbon-cmd { padding: 6px 10px; border-radius: 6px; border: 1px solid #dcdcdc; background: #fff;
+  color: #333; cursor: pointer; font: inherit; white-space: nowrap; }
+.ribbon-cmd:not(:disabled):hover { background: #eef2ff; }
+.ribbon-cmd:disabled { opacity: 0.4; cursor: default; }
+/* Gallery icon buttons keep the same look as the ribbon's own tool buttons. */
+.flyout-gallery .tool-btn { width: 34px; height: 34px; border-radius: 6px; border: 1px solid #dcdcdc;
+  background: #fff; color: #333; cursor: pointer; display: flex; align-items: center;
+  justify-content: center; padding: 0; }
+.flyout-gallery .tool-btn:hover { background: #eef2ff; }
+
+/* Finger-sized ribbon controls on touch devices — placed after the ribbon's base
+   rules so it out-orders their scoped sizing. Restores the 48px-class touch target
+   the retired tool palette gave undo/redo. The .ribbon row has no fixed height, so
+   taller controls grow it naturally. */
+@media (any-pointer: coarse) {
+  .ribbon-action, .ribbon .tool-btn, .flyout-gallery .tool-btn { width: 44px; height: 44px; }
+  .ribbon-caret { width: 22px; }
+  .ribbon-cmd { padding: 12px 14px; }
 }
