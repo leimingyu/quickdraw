@@ -1,7 +1,7 @@
 import type { App } from '../app';
 import type { Node, Shape, Connector, Endpoint } from '../model/types';
 import { hitTest, shapeInRect, resizeBox, resizeRotatedBox, shapeHandlePositions, rotationHandlePos, angleFromCenter, shapeCenter, ROTATION_KNOB_DIST, type Box, type Handle, type Point } from '../model/geometry';
-import { groupMembers, expandToGroups, isShape, isConnector } from '../model/document';
+import { groupMembers, expandToGroups, isShape, isConnector, isAttached } from '../model/document';
 import { computeSnap } from '../model/snapping';
 import { snapValueToGrid } from '../model/grid';
 import { connectorHit } from '../render/connector';
@@ -20,6 +20,7 @@ export class SelectTool implements Tool {
   private mode: Mode = 'idle';
   private start: Point = { x: 0, y: 0 };
   private startPos = new Map<string, { x: number; y: number }>(); // selected shapes' positions at drag start
+  private startEnds = new Map<string, { from?: Point; to?: Point }>(); // selected connectors' FREE ends at drag start
   private moved = false;
   protected activeHandle: Handle | null = null;
   private resizeShape: Shape | null = null;
@@ -85,6 +86,17 @@ export class SelectTool implements Tool {
           .filter((s) => this.app.selection.has(s.id))
           .map((s) => [s.id, { x: s.x, y: s.y }]),
       );
+      // A selected connector drags by its free ends; an attached end is left alone,
+      // since it already follows its shape.
+      this.startEnds = new Map(
+        this.app.activeTab.nodes
+          .filter(isConnector)
+          .filter((c) => this.app.selection.has(c.id))
+          .map((c) => [c.id, {
+            from: isAttached(c.from) ? undefined : { ...c.from },
+            to: isAttached(c.to) ? undefined : { ...c.to },
+          }]),
+      );
       this.moved = false;
       this.app.render();
     } else {
@@ -119,13 +131,25 @@ export class SelectTool implements Tool {
       const totalDy = world.y - this.start.y;
       if (totalDx !== 0 || totalDy !== 0) this.moved = true;
       const selected = this.app.activeTab.nodes.filter(isShape).filter((s) => this.app.selection.has(s.id));
-      // Raw bounding box of the selection at the dragged position, then snap it.
+      // Raw bounding box of the selection at the dragged position, then snap it. Shapes
+      // define the box whenever any are selected (so their snapping is unchanged); a
+      // connector-only drag falls back to the box around its free ends.
       let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
       for (const s of selected) {
         const p = this.startPos.get(s.id)!;
         minX = Math.min(minX, p.x + totalDx); minY = Math.min(minY, p.y + totalDy);
         maxX = Math.max(maxX, p.x + totalDx + s.w); maxY = Math.max(maxY, p.y + totalDy + s.h);
       }
+      if (selected.length === 0) {
+        for (const ends of this.startEnds.values()) {
+          for (const p of [ends.from, ends.to]) {
+            if (!p) continue;
+            minX = Math.min(minX, p.x + totalDx); minY = Math.min(minY, p.y + totalDy);
+            maxX = Math.max(maxX, p.x + totalDx); maxY = Math.max(maxY, p.y + totalDy);
+          }
+        }
+      }
+      if (minX === Infinity) { this.app.snapGuides = []; return; } // nothing movable selected
       // Snap-to-grid takes over when on: quantize the selection's top-left to the grid and
       // shift everything by that single offset (relative layout preserved), no guide lines.
       // Otherwise fall back to shape-to-shape edge/center snapping.
@@ -149,6 +173,13 @@ export class SelectTool implements Tool {
         const p = this.startPos.get(s.id)!;
         s.x = p.x + totalDx + snapDx;
         s.y = p.y + totalDy + snapDy;
+      }
+      const dx = totalDx + snapDx, dy = totalDy + snapDy;
+      for (const c of this.app.activeTab.nodes.filter(isConnector)) {
+        const ends = this.startEnds.get(c.id);
+        if (!ends) continue;
+        if (ends.from) c.from = { x: ends.from.x + dx, y: ends.from.y + dy };
+        if (ends.to) c.to = { x: ends.to.x + dx, y: ends.to.y + dy };
       }
       this.app.render();
       return;
