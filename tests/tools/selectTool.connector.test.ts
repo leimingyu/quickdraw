@@ -78,3 +78,71 @@ describe('SelectTool with connectors', () => {
     expect(app.selection.has(c.id)).toBe(false);
   });
 });
+
+/** Dragging a connector's body moves its free ends (attached ends stay pinned to
+ *  their shape) — the pointer counterpart of App.nudgeSelection. */
+describe('SelectTool dragging connectors', () => {
+  const pe = { shiftKey: false } as PointerEvent;
+
+  function drag(from: Point, to: Point) {
+    tool.onPointerDown(from, pe);
+    tool.onPointerMove(to, pe);
+    tool.onPointerUp(to, pe);
+  }
+
+  it('dragging the body of a free connector moves both ends', () => {
+    const c = createConnector({ x: 100, y: 100 }, { x: 300, y: 100 });
+    addNode(app.activeTab, c);
+    drag({ x: 200, y: 100 }, { x: 250, y: 140 }); // press on the line, drag by (50,40)
+    expect(c.from).toEqual({ x: 150, y: 140 });
+    expect(c.to).toEqual({ x: 350, y: 140 });
+  });
+
+  it('a single click on a connector selects it and moves nothing', () => {
+    const c = createConnector({ x: 100, y: 100 }, { x: 300, y: 100 });
+    addNode(app.activeTab, c);
+    click({ x: 200, y: 100 });
+    expect(app.selection).toEqual(new Set([c.id]));
+    expect(c.from).toEqual({ x: 100, y: 100 });
+  });
+
+  it('dragging a connector is undoable', () => {
+    const c = createConnector({ x: 100, y: 100 }, { x: 300, y: 100 });
+    addNode(app.activeTab, c);
+    app.commit();
+    drag({ x: 200, y: 100 }, { x: 250, y: 140 });
+    app.undo();
+    const moved = app.activeTab.nodes.find((n) => n.id === c.id)!;
+    expect((moved as typeof c).from).toEqual({ x: 100, y: 100 });
+  });
+
+  it('an attached end stays pinned while the free end follows the drag', () => {
+    const a = createShape('rect', 0, 0, 100, 100);
+    const c = createConnector({ nodeId: a.id }, { x: 300, y: 50 });
+    [a, c].forEach((n) => addNode(app.activeTab, n));
+    drag({ x: 200, y: 50 }, { x: 230, y: 70 }); // on the line, right of the shape
+    expect(c.from).toEqual({ nodeId: a.id });
+    expect(c.to).toEqual({ x: 330, y: 70 });
+  });
+
+  it('dragging a shape carries a selected connector\'s free end with it', () => {
+    const a = createShape('rect', 0, 0, 100, 100);
+    const c = createConnector({ nodeId: a.id }, { x: 300, y: 50 });
+    [a, c].forEach((n) => addNode(app.activeTab, n));
+    app.selection = new Set([a.id, c.id]);
+    tool.onPointerDown({ x: 50, y: 50 }, pe); // press inside the shape
+    tool.onPointerMove({ x: 90, y: 50 }, pe); // drag right by 40
+    tool.onPointerUp({ x: 90, y: 50 }, pe);
+    expect(a.x).toBe(40);
+    expect(c.to).toEqual({ x: 340, y: 50 });
+  });
+
+  it('a connector-only drag snaps its ends to the grid when snap-to-grid is on', () => {
+    app.snapToGrid = true;
+    const c = createConnector({ x: 100, y: 100 }, { x: 300, y: 100 });
+    addNode(app.activeTab, c);
+    drag({ x: 200, y: 100 }, { x: 223, y: 121 }); // total (23,21) → top-left (123,121) snaps to (120,120)
+    expect(c.from).toEqual({ x: 120, y: 120 });
+    expect(c.to).toEqual({ x: 320, y: 120 });
+  });
+});
